@@ -33,6 +33,8 @@ import {
   findCityData,
   type CityData,
 } from '../../data/indiaLocations';
+import { reverseGeocodeLocation } from '../../services/locationSearch';
+import { useUserLocation } from '../../context/LocationContext';
 
 interface ReportFormProps {
   onReportSubmitted?: (report: QueuedReport) => void;
@@ -54,14 +56,15 @@ const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
 export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
   const { i18n } = useTranslation();
   const isHindi = i18n.language === 'hi';
+  const { location: userLoc } = useUserLocation();
 
   // Form State
   const [category, setCategory] = useState<WeatherCategory>('rainfall');
   const [severity, setSeverity] = useState<Severity>('moderate');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [lat, setLat] = useState<number>(19.076);
-  const [lon, setLon] = useState<number>(72.8777);
+  const [city, setCity] = useState(userLoc?.cityName || '');
+  const [state, setState] = useState(userLoc?.stateName || '');
+  const [lat, setLat] = useState<number>(userLoc?.lat ?? 19.076);
+  const [lon, setLon] = useState<number>(userLoc?.lng ?? 72.8777);
   const [description, setDescription] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [isLocating, setIsLocating] = useState(false);
@@ -73,6 +76,16 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
   // Dropdown states
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync with userLoc if fields are empty
+  useEffect(() => {
+    if (userLoc && !city) {
+      setCity(userLoc.cityName);
+      setState(userLoc.stateName);
+      setLat(userLoc.lat);
+      setLon(userLoc.lng);
+    }
+  }, [userLoc, city]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -130,8 +143,29 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
   const handleGetLocation = () => {
     setIsLocating(true);
 
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    const applyCoords = async (latitude: number, longitude: number) => {
+      setLat(latitude);
+      setLon(longitude);
+      try {
+        const geoInfo = await reverseGeocodeLocation(latitude, longitude);
+        if (geoInfo.cityName && geoInfo.cityName !== 'Current Location') {
+          setCity(geoInfo.cityName);
+        }
+        if (geoInfo.stateName) {
+          setState(geoInfo.stateName);
+        }
+      } catch {
+        // keep current or nearest
+      }
       setIsLocating(false);
+    };
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      if (userLoc) {
+        applyCoords(userLoc.lat, userLoc.lng);
+      } else {
+        setIsLocating(false);
+      }
       return;
     }
 
@@ -139,21 +173,29 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
       (pos) => {
         const latitude = Number(pos.coords.latitude.toFixed(4));
         const longitude = Number(pos.coords.longitude.toFixed(4));
-        setLat(latitude);
-        setLon(longitude);
-        setCity('Current GPS Fix');
-        setState('Auto-detected Region');
-        setIsLocating(false);
+        applyCoords(latitude, longitude);
       },
       (_err) => {
-        // Fallback default coordinates
-        setCity('Mumbai');
-        setState('Maharashtra');
-        setLat(19.076);
-        setLon(72.8777);
-        setIsLocating(false);
+        // Fallback to low-accuracy Wi-Fi position or userLoc
+        navigator.geolocation.getCurrentPosition(
+          (fallbackPos) => {
+            const latitude = Number(fallbackPos.coords.latitude.toFixed(4));
+            const longitude = Number(fallbackPos.coords.longitude.toFixed(4));
+            applyCoords(latitude, longitude);
+          },
+          () => {
+            if (userLoc) {
+              setLat(userLoc.lat);
+              setLon(userLoc.lng);
+              setCity(userLoc.cityName);
+              setState(userLoc.stateName);
+            }
+            setIsLocating(false);
+          },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        );
       },
-      { timeout: 7000, enableHighAccuracy: true }
+      { timeout: 5000, enableHighAccuracy: true }
     );
   };
 

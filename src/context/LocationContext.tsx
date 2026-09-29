@@ -154,21 +154,22 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsDetecting(true);
     setDetectionError(null);
 
-    // Helper to try IP-based location fallback
-    const tryIpFallback = async () => {
+    // Helper to try multiple IP-based location services
+    const tryIpFallback = async (): Promise<boolean> => {
+      // 1. Try ipwho.is (CORS-friendly, no key required)
       try {
-        const res = await fetch('https://ipapi.co/json/');
+        const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(4000) });
         if (res.ok) {
           const data = await res.json();
-          if (data.city && data.latitude && data.longitude) {
+          if (data.success && data.latitude && data.longitude) {
             const ipLoc: UserLocation = {
-              lat: data.latitude,
-              lng: data.longitude,
-              cityName: data.city,
+              lat: Number(data.latitude.toFixed(4)),
+              lng: Number(data.longitude.toFixed(4)),
+              cityName: data.city || 'My Location',
               stateName: data.region || 'India',
               tempC: 30,
               weatherIcon: '☀️',
-              condition: 'Clear',
+              condition: 'Clear Sky',
               isCustom: false,
             };
             setLocation(ipLoc);
@@ -181,7 +182,79 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setIsDetecting(false);
             window.dispatchEvent(
               new CustomEvent('skysignal:recenter-map', {
-                detail: { lat: ipLoc.lat, lng: ipLoc.lng, zoom: 14, name: ipLoc.cityName },
+                detail: { lat: ipLoc.lat, lng: ipLoc.lng, zoom: 13, name: ipLoc.cityName },
+              })
+            );
+            return true;
+          }
+        }
+      } catch {
+        // try next
+      }
+
+      // 2. Try freeipapi.com
+      try {
+        const res = await fetch('https://freeipapi.com/api/json', { signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.latitude && data.longitude) {
+            const ipLoc: UserLocation = {
+              lat: Number(data.latitude.toFixed(4)),
+              lng: Number(data.longitude.toFixed(4)),
+              cityName: data.cityName || 'My Location',
+              stateName: data.regionName || 'India',
+              tempC: 29,
+              weatherIcon: '☀️',
+              condition: 'Clear Sky',
+              isCustom: false,
+            };
+            setLocation(ipLoc);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(ipLoc));
+              sessionStorage.setItem(SESSION_KEY, 'true');
+            } catch {
+              // ignore
+            }
+            setIsDetecting(false);
+            window.dispatchEvent(
+              new CustomEvent('skysignal:recenter-map', {
+                detail: { lat: ipLoc.lat, lng: ipLoc.lng, zoom: 13, name: ipLoc.cityName },
+              })
+            );
+            return true;
+          }
+        }
+      } catch {
+        // try next
+      }
+
+      // 3. Try ipapi.co
+      try {
+        const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.city && data.latitude && data.longitude) {
+            const ipLoc: UserLocation = {
+              lat: Number(data.latitude.toFixed(4)),
+              lng: Number(data.longitude.toFixed(4)),
+              cityName: data.city,
+              stateName: data.region || 'India',
+              tempC: 30,
+              weatherIcon: '☀️',
+              condition: 'Clear Sky',
+              isCustom: false,
+            };
+            setLocation(ipLoc);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(ipLoc));
+              sessionStorage.setItem(SESSION_KEY, 'true');
+            } catch {
+              // ignore
+            }
+            setIsDetecting(false);
+            window.dispatchEvent(
+              new CustomEvent('skysignal:recenter-map', {
+                detail: { lat: ipLoc.lat, lng: ipLoc.lng, zoom: 13, name: ipLoc.cityName },
               })
             );
             return true;
@@ -190,6 +263,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch {
         // ignore
       }
+
       return false;
     };
 
@@ -202,65 +276,81 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return ipSuccess;
     }
 
+    const processPosition = async (position: GeolocationPosition): Promise<boolean> => {
+      const lat = Number(position.coords.latitude.toFixed(4));
+      const lng = Number(position.coords.longitude.toFixed(4));
+
+      let geoInfo;
+      try {
+        geoInfo = await reverseGeocodeLocation(lat, lng);
+      } catch {
+        const nearest = findNearestCity(lat, lng);
+        geoInfo = {
+          cityName: nearest.cityName,
+          stateName: nearest.stateName,
+          tempC: nearest.tempC,
+          weatherIcon: nearest.weatherIcon,
+          condition: nearest.condition,
+        };
+      }
+
+      const detectedLoc: UserLocation = {
+        lat,
+        lng,
+        cityName: geoInfo.cityName,
+        stateName: geoInfo.stateName,
+        tempC: geoInfo.tempC,
+        weatherIcon: geoInfo.weatherIcon,
+        condition: geoInfo.condition,
+        isCustom: false,
+      };
+
+      setLocation(detectedLoc);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(detectedLoc));
+        sessionStorage.setItem(SESSION_KEY, 'true');
+      } catch {
+        // ignore
+      }
+      setIsDetecting(false);
+      setIsModalOpen(false);
+
+      // Fly map directly to detected GPS coordinates
+      window.dispatchEvent(
+        new CustomEvent('skysignal:recenter-map', {
+          detail: { lat: detectedLoc.lat, lng: detectedLoc.lng, zoom: 15, name: detectedLoc.cityName },
+        })
+      );
+      return true;
+    };
+
     return new Promise((resolve) => {
+      // First attempt: standard accuracy with 10s timeout
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          const lat = Number(position.coords.latitude.toFixed(4));
-          const lng = Number(position.coords.longitude.toFixed(4));
-          
-          let geoInfo;
-          try {
-            geoInfo = await reverseGeocodeLocation(lat, lng);
-          } catch {
-            const nearest = findNearestCity(lat, lng);
-            geoInfo = {
-              cityName: nearest.cityName,
-              stateName: nearest.stateName,
-              tempC: nearest.tempC,
-              weatherIcon: nearest.weatherIcon,
-              condition: nearest.condition,
-            };
-          }
-
-          const detectedLoc: UserLocation = {
-            lat,
-            lng,
-            cityName: geoInfo.cityName,
-            stateName: geoInfo.stateName,
-            tempC: geoInfo.tempC,
-            weatherIcon: geoInfo.weatherIcon,
-            condition: geoInfo.condition,
-            isCustom: false,
-          };
-
-          setLocation(detectedLoc);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(detectedLoc));
-            sessionStorage.setItem(SESSION_KEY, 'true');
-          } catch {
-            // ignore
-          }
-          setIsDetecting(false);
-          setIsModalOpen(false);
-
-          // Fly map directly to detected GPS coordinates
-          window.dispatchEvent(
-            new CustomEvent('skysignal:recenter-map', {
-              detail: { lat: detectedLoc.lat, lng: detectedLoc.lng, zoom: 16, name: detectedLoc.cityName },
-            })
+          const success = await processPosition(position);
+          resolve(success);
+        },
+        async (_err) => {
+          // If first attempt fails/times out, try with highAccuracy false
+          navigator.geolocation.getCurrentPosition(
+            async (fallbackPos) => {
+              const success = await processPosition(fallbackPos);
+              resolve(success);
+            },
+            async (finalErr) => {
+              console.warn('Geolocation access failed or timed out:', finalErr.message);
+              const ipSuccess = await tryIpFallback();
+              if (!ipSuccess) {
+                setDetectionError('Unable to retrieve exact GPS location. Please check browser location permissions or choose your city.');
+              }
+              setIsDetecting(false);
+              resolve(ipSuccess);
+            },
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
           );
-          resolve(true);
         },
-        async (err) => {
-          console.warn('Geolocation access not granted or timed out:', err.message);
-          const ipSuccess = await tryIpFallback();
-          if (!ipSuccess) {
-            setDetectionError('Unable to retrieve your exact GPS coordinates. Please select your city below.');
-          }
-          setIsDetecting(false);
-          resolve(ipSuccess);
-        },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
       );
     });
   }, []);

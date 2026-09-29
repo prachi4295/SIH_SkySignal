@@ -14,10 +14,10 @@ import { useTranslation } from 'react-i18next';
 import {
   Maximize2,
   Minimize2,
-  RotateCcw,
   Layers,
   ChevronDown,
   ChevronUp,
+  Navigation,
 } from 'lucide-react';
 import type { WeatherEvent } from '../../types/weather';
 import { SEVERITY_CONFIG } from '../../data/mock';
@@ -31,7 +31,7 @@ interface GeoRadarMapProps {
   height?: string;
 }
 
-const DEFAULT_ZOOM = 16;
+const DEFAULT_ZOOM = 12;
 
 // Tile Providers (Standard OpenStreetMap with high-res Retina support)
 const TILE_LAYERS = {
@@ -364,11 +364,11 @@ export default function GeoRadarMap({
       <div className="absolute top-3.5 right-3.5 z-[1000] flex flex-col gap-1.5 shadow-xl rounded-2xl bg-white/95 backdrop-blur-md p-1 border-2 border-slate-200">
         <button
           onClick={handleResetToUser}
-          className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-600 transition-all cursor-pointer shadow-xs active:scale-95"
-          title="Recenter on Your Location"
-          aria-label="Recenter on your location"
+          className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-sky-600 hover:text-sky-700 transition-all cursor-pointer shadow-xs active:scale-95 border border-sky-100"
+          title={isHindi ? 'मेरा स्थान दिखाएं' : 'Center on My Location'}
+          aria-label="Center on my location"
         >
-          <RotateCcw size={16} />
+          <Navigation size={16} className="text-sky-600" />
         </button>
 
         <button
