@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Citizen Reporting Portal
+   SkySignal — Citizen Reporting Portal
    Public-facing observation portal designed for rapid under-30-second
    submissions, offline resilience, and verified community mapping.
    ═══════════════════════════════════════════════════════ */
@@ -9,11 +9,8 @@ import { useTranslation } from 'react-i18next';
 import {
   Send,
   History,
-  Shield,
-  WifiOff,
   Compass,
   CheckCircle2,
-  Clock,
   Radio,
 } from 'lucide-react';
 import ReportForm from '../components/citizen/ReportForm';
@@ -21,6 +18,7 @@ import MyReportsList from '../components/citizen/MyReportsList';
 import GeoRadarMap from '../components/dashboard/GeoRadarMap';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
 import { mockWeatherEvents } from '../lib/mockData';
+import { deduplicateWeatherEvents } from '../services/eventDeduplication';
 import type { QueuedReport } from '../lib/offlineQueue';
 
 type ActiveTab = 'submit' | 'history' | 'map';
@@ -44,7 +42,7 @@ export default function CitizenPortal() {
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-sky-500/15 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-10 w-48 h-48 rounded-full bg-cyan-400/10 blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-3 max-w-2xl">
+        <div className="relative z-10 space-y-3 max-w-3xl">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 font-extrabold text-[11px] border border-sky-400/30 flex items-center gap-1.5">
               <Radio size={13} className="animate-pulse" />
@@ -56,39 +54,11 @@ export default function CitizenPortal() {
             </span>
           </div>
 
-          <h1 className="text-[24px] sm:text-[30px] font-black tracking-tight leading-tight font-['Outfit']">
+          <h1 className="text-[24px] sm:text-[30px] font-black tracking-tight leading-tight">
             {isHindi
-              ? 'आपकी जानकारी से फर्क पड़ता है — स्थानीय मौसम की रिपोर्ट आईएमडी को भेजें।'
-              : 'Your observation makes a difference — Report local weather incidents to IMD.'}
+              ? 'आपकी जानकारी से फर्क पड़ता है — स्थानीय मौसम की रिपोर्ट हमें भेजें।'
+              : 'Your observation makes a difference — Report local weather incidents to us.'}
           </h1>
-
-          <p className="text-[13px] sm:text-[14px] text-slate-300 leading-relaxed font-normal">
-            {isHindi
-              ? 'अत्यधिक बारिश, बाढ़, आंधी और लू की सटीक ज़मीनी तस्वीरें व विवरण 30 सेकंड से भी कम समय में दर्ज करें। यह डेटा सीधे आईएमडी के राष्ट्रीय पूर्वानुमान मॉडल में उपयोग होता है।'
-              : 'Submit high-impact observations (flash flooding, treefalls, severe rain, hail, heatwaves) in under 30 seconds. Your ground-truth report feeds directly into IMD’s predictive models.'}
-          </p>
-        </div>
-
-        {/* Feature Highlights Grid */}
-        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 mt-6 border-t border-slate-700/60 text-[12px]">
-          <div className="flex items-center gap-2.5 text-slate-200">
-            <div className="w-7 h-7 rounded-lg bg-sky-500/20 flex items-center justify-center text-sky-400">
-              <Clock size={15} />
-            </div>
-            <span>{isHindi ? '30 सेकंड त्वरित रिपोर्टिंग' : 'Under 30s Rapid Submission'}</span>
-          </div>
-          <div className="flex items-center gap-2.5 text-slate-200">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <WifiOff size={15} />
-            </div>
-            <span>{isHindi ? 'ऑफ़लाइन कतार व स्वतः सिंक' : 'Offline Queue & Auto-Sync'}</span>
-          </div>
-          <div className="flex items-center gap-2.5 text-slate-200">
-            <div className="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
-              <Shield size={15} />
-            </div>
-            <span>{isHindi ? 'प्रत्यक्ष आईएमडी सत्यापन' : 'Direct IMD Corroboration'}</span>
-          </div>
         </div>
       </div>
 
@@ -171,7 +141,7 @@ export default function CitizenPortal() {
           </div>
 
           <GeoRadarMap
-            events={mockWeatherEvents}
+            events={deduplicateWeatherEvents(mockWeatherEvents)}
             onSelectEvent={setSelectedMapEvent}
             height="h-[560px]"
           />

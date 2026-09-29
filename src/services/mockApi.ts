@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Mock API Service Layer
+   SkySignal — Mock API Service Layer
    Simulates backend REST API + SSE telemetry stream
    300ms latency · filters · bulk actions · real-time hook
    ═══════════════════════════════════════════════════════ */
@@ -318,7 +318,7 @@ function generateTelemetryEvent(): TelemetryMessage {
     };
   }
 
-  // event_created — synthesize a new minor event
+  // event_created — synthesize a new minor event or fuse into existing
   const cities = Object.values({
     mumbai:   { city: 'Mumbai',    state: 'Maharashtra',  lat: 19.076, lon: 72.877 },
     delhi:    { city: 'Delhi',     state: 'Delhi NCR',    lat: 28.614, lon: 77.209 },
@@ -334,6 +334,37 @@ function generateTelemetryEvent(): TelemetryMessage {
   const category = categories[Math.floor(Math.random() * categories.length)];
   const severities: ('minor' | 'moderate' | 'severe')[] = ['minor', 'moderate', 'severe'];
   const severity = severities[Math.floor(Math.random() * 3)];
+
+  // Check if an event already exists for this city and category
+  const existingIdx = eventsStore.findIndex(
+    (e) =>
+      e.category.toLowerCase() === category.toLowerCase() &&
+      e.city.toLowerCase() === loc.city.toLowerCase()
+  );
+
+  if (existingIdx !== -1) {
+    // Fuse into existing canonical event
+    const existing = eventsStore[existingIdx];
+    const updated: WeatherEvent = {
+      ...existing,
+      confidence: Math.min(100, Math.max(existing.confidence, 60 + Math.floor(Math.random() * 35))),
+      last_updated_at: new Date().toISOString(),
+      independent_source_count: Math.min(8, (existing.independent_source_count || 1) + 1),
+      evidence_summary: {
+        citizen_reports: (existing.evidence_summary?.citizen_reports || 0) + Math.floor(Math.random() * 3) + 1,
+        social_posts: (existing.evidence_summary?.social_posts || 0) + Math.floor(Math.random() * 7),
+        sensor_corroborated: true,
+        news_articles: (existing.evidence_summary?.news_articles || 0) + 1,
+      },
+    };
+    eventsStore[existingIdx] = updated;
+
+    return {
+      type: 'event_updated',
+      payload: updated,
+      timestamp: new Date().toISOString(),
+    };
+  }
 
   const newEvent: WeatherEvent = {
     id: `EVT-2026-${String(nextEventId++).padStart(3, '0')}`,

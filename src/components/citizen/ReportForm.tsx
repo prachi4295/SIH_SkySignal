@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Citizen Rapid Report Form
+   SkySignal — Citizen Rapid Report Form
    Under-30-second submission form with offline IndexedDB queue,
    GPS geolocation, drag-and-drop media upload & validation
    ═══════════════════════════════════════════════════════ */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Send,
@@ -21,12 +21,18 @@ import {
   X,
   WifiOff,
   Navigation,
-  Check,
+  ChevronDown,
 } from 'lucide-react';
 import { queueOfflineReport, getOrCreateDeviceId, type QueuedReport } from '../../lib/offlineQueue';
 import { submitReport } from '../../services/mockApi';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../data/mock';
 import type { WeatherCategory, Severity, ReportSubmission } from '../../types/weather';
+import {
+  INDIAN_STATES_AND_UTS,
+  ALL_INDIAN_CITIES,
+  findCityData,
+  type CityData,
+} from '../../data/indiaLocations';
 
 interface ReportFormProps {
   onReportSubmitted?: (report: QueuedReport) => void;
@@ -59,19 +65,72 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
   const [description, setDescription] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [isLocating, setIsLocating] = useState(false);
-  const [locationStatus, setLocationStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [feedbackToast, setFeedbackToast] = useState<{ message: string; isOffline?: boolean } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Dropdown states
+  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setIsCityDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter cities based on selected state and typed city
+  const filteredCities = ALL_INDIAN_CITIES.filter((c) => {
+    const matchesState = !state || c.state.toLowerCase() === state.toLowerCase();
+    const matchesQuery = !city || c.city.toLowerCase().includes(city.trim().toLowerCase());
+    return matchesState && matchesQuery;
+  });
+
+  // Select city handler (Auto-fills state and coordinates)
+  const handleSelectCity = (c: CityData) => {
+    setCity(c.city);
+    setState(c.state);
+    setLat(c.lat);
+    setLon(c.lon);
+    setIsCityDropdownOpen(false);
+  };
+
+  // City text input handler with auto-detection of State
+  const handleCityInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCity(val);
+    setIsCityDropdownOpen(true);
+
+    const matched = findCityData(val);
+    if (matched && matched.city.toLowerCase() === val.trim().toLowerCase()) {
+      setState(matched.state);
+      setLat(matched.lat);
+      setLon(matched.lon);
+    }
+  };
+
+  // State selection handler
+  const handleStateChange = (selectedState: string) => {
+    setState(selectedState);
+    if (selectedState && city) {
+      const matched = findCityData(city);
+      if (matched && matched.state.toLowerCase() !== selectedState.toLowerCase()) {
+        setCity('');
+      }
+    }
+  };
+
   // Instant GPS Geolocation
   const handleGetLocation = () => {
     setIsLocating(true);
-    setLocationStatus(isHindi ? 'जीपीएस स्थान प्राप्त किया जा रहा है...' : 'Acquiring GPS fix from device sensors...');
 
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setLocationStatus(isHindi ? 'जीपीएस समर्थित नहीं है' : 'GPS hardware unavailable on this device');
       setIsLocating(false);
       return;
     }
@@ -84,11 +143,6 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
         setLon(longitude);
         setCity('Current GPS Fix');
         setState('Auto-detected Region');
-        setLocationStatus(
-          isHindi
-            ? `स्थान दर्ज: ${latitude}°N, ${longitude}°E (सटीकता ~${Math.round(pos.coords.accuracy)}m)`
-            : `Coordinates locked: ${latitude}°N, ${longitude}°E (±${Math.round(pos.coords.accuracy)}m accuracy)`
-        );
         setIsLocating(false);
       },
       (_err) => {
@@ -97,11 +151,6 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
         setState('Maharashtra');
         setLat(19.076);
         setLon(72.8777);
-        setLocationStatus(
-          isHindi
-            ? 'जीपीएस अनुमति अस्वीकृत। डिफ़ॉल्ट रूप से मुंबई चुना गया।'
-            : 'GPS permission denied. Fallback set to Mumbai region.'
-        );
         setIsLocating(false);
       },
       { timeout: 7000, enableHighAccuracy: true }
@@ -254,30 +303,37 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
       onSubmit={handleSubmit}
       className="glass-card p-5 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xl space-y-6"
     >
-      {/* Toast Feedback */}
+      {/* Toast Feedback (Floating Bottom-Right Alert) */}
       {feedbackToast && (
-        <div
-          className={`p-4 rounded-2xl border text-[13px] font-bold flex items-center justify-between shadow-sm animate-fade-in ${
-            feedbackToast.isOffline
-              ? 'bg-amber-50 border-amber-300 text-amber-900'
-              : 'bg-emerald-50 border-emerald-300 text-emerald-900'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {feedbackToast.isOffline ? (
-              <WifiOff size={18} className="text-amber-600 shrink-0" />
-            ) : (
-              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-            )}
-            <span>{feedbackToast.message}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFeedbackToast(null)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+        <div className="fixed bottom-22 right-6 z-50 max-w-md w-[calc(100vw-3rem)] sm:w-[420px] animate-slide-up pointer-events-auto">
+          <div
+            className={`p-4 rounded-2xl border shadow-2xl backdrop-blur-md text-[13px] font-bold flex items-start justify-between gap-3 ${
+              feedbackToast.isOffline
+                ? 'bg-amber-50/95 border-amber-300 text-amber-950 shadow-amber-500/10'
+                : 'bg-emerald-50/95 border-emerald-300 text-emerald-950 shadow-emerald-500/15 ring-1 ring-emerald-400/30'
+            }`}
           >
-            <X size={16} />
-          </button>
+            <div className="flex items-start gap-2.5">
+              {feedbackToast.isOffline ? (
+                <WifiOff size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              ) : (
+                <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-0.5">
+                <span className="leading-snug block">{feedbackToast.message}</span>
+                <span className="text-[10px] text-emerald-700/80 font-mono block">
+                  Encrypted telemetry sync • IMD Disaster Desk
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFeedbackToast(null)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-black/5 transition-colors shrink-0 cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -295,10 +351,9 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
           <label className="text-[13px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
             <span>1. {isHindi ? 'मौसम आपदा का प्रकार' : 'Hazard Category'}</span>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-bold">
-              7 Strict Types
+              {isHindi ? '७ श्रेणियां' : '7 Strict Types'}
             </span>
           </label>
-          <span className="text-[11px] text-slate-400">Under 30s Tap</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
@@ -366,7 +421,15 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
                 `}
               >
                 <span>{config.icon}</span>
-                <span className="capitalize">{config.label}</span>
+                <span className="capitalize">
+                  {isHindi
+                    ? sev === 'minor'
+                      ? 'सामान्य'
+                      : sev === 'moderate'
+                      ? 'मध्यम'
+                      : 'गंभीर'
+                    : config.label}
+                </span>
               </button>
             );
           })}
@@ -399,35 +462,81 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="relative">
-            <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          {/* City Combobox & Dropdown */}
+          <div className="relative" ref={cityDropdownRef}>
+            <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder={isHindi ? 'शहर / इलाका (उदा. बांद्रा, मुंबई)' : 'City / Locality (e.g. Bandra, Mumbai)'}
-              className="w-full pl-10 pr-3.5 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium"
+              onChange={handleCityInputChange}
+              onFocus={() => setIsCityDropdownOpen(true)}
+              placeholder={isHindi ? 'शहर चुनें या लिखें (उदा. सूरत)' : 'Select or type City (e.g. Surat)'}
+              className="w-full pl-10 pr-9 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium"
               required
+              autoComplete="off"
             />
+            <button
+              type="button"
+              onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              title="Toggle City Dropdown"
+            >
+              <ChevronDown size={15} className={`transition-transform duration-200 ${isCityDropdownOpen ? 'rotate-180 text-sky-600' : ''}`} />
+            </button>
+
+            {/* Single Interactive Dropdown Menu with all Indian Cities */}
+            {isCityDropdownOpen && (
+              <div className="absolute z-50 left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-xl py-1.5 divide-y divide-slate-100 animate-fade-in">
+                <div className="sticky top-0 bg-slate-50/95 backdrop-blur-md px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 z-10">
+                  <span>{state ? `Cities in ${state}` : (isHindi ? 'सभी भारतीय शहर' : 'All Indian Cities')}</span>
+                  <span className="text-sky-600">{filteredCities.length} {isHindi ? 'उपलब्ध' : 'available'}</span>
+                </div>
+                {filteredCities.length > 0 ? (
+                  filteredCities.map((c) => (
+                    <button
+                      key={`${c.city}-${c.state}`}
+                      type="button"
+                      onClick={() => handleSelectCity(c)}
+                      className={`w-full text-left px-3.5 py-2 hover:bg-sky-50 flex items-center justify-between text-[12px] transition-colors cursor-pointer ${
+                        city.toLowerCase() === c.city.toLowerCase() ? 'bg-sky-50/80 font-bold text-sky-700' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 text-slate-800 text-left">
+                        <MapPin size={12} className="text-sky-600 shrink-0" />
+                        <span>{c.city}</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md shrink-0">
+                        {c.state}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3.5 py-2.5 text-[11px] text-slate-400 italic text-center">
+                    {isHindi ? 'कोई मेल खाता शहर नहीं मिला — आप कोई भी स्थान लिख सकते हैं' : 'No exact match — you can type your custom locality'}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div>
-            <input
-              type="text"
+
+          {/* State Selection Dropdown */}
+          <div className="relative">
+            <select
               value={state}
-              onChange={(e) => setState(e.target.value)}
-              placeholder={isHindi ? 'राज्य (उदा. महाराष्ट्र)' : 'State / UT (e.g. Maharashtra)'}
-              className="w-full px-3.5 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium"
+              onChange={(e) => handleStateChange(e.target.value)}
+              className="w-full pl-3.5 pr-10 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium cursor-pointer appearance-none"
               required
-            />
+            >
+              <option value="">{isHindi ? 'राज्य / केंद्र शासित प्रदेश चुनें' : 'Select State / UT'}</option>
+              {INDIAN_STATES_AND_UTS.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
         </div>
-
-        {locationStatus && (
-          <p className="text-[11px] text-sky-700 font-semibold flex items-center gap-1.5 pt-0.5">
-            <Check size={12} className="text-sky-600" />
-            <span>{locationStatus}</span>
-          </p>
-        )}
       </div>
 
       {/* ── 4. Media Upload Zone (Drag-and-Drop + 10MB limit) ── */}
@@ -469,7 +578,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
               {isHindi ? 'फोटो खींचें या यहाँ खींचकर छोड़ें' : 'Take a photo or drag files here'}
             </span>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Supports JPG, PNG, MP4 up to 10MB per file
+              {isHindi ? 'JPG, PNG, MP4 अधिकतम 10MB प्रति फाइल समर्थित' : 'Supports JPG, PNG, MP4 up to 10MB per file'}
             </p>
           </div>
         </div>
@@ -542,7 +651,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
           <>
             <Send size={16} />
             <span>
-              {isHindi ? 'आईएमडी रडार को रिपोर्ट सबमिट करें' : 'Submit Rapid Observation (Instant)'}
+              {isHindi ? 'सबमिट करें' : 'Submit'}
             </span>
           </>
         )}

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Placeholder Page
+   SkySignal — Placeholder Page
    Styled coming-soon page for routes not yet built
    ═══════════════════════════════════════════════════════ */
 

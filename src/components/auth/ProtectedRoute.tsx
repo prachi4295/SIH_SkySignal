@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — ProtectedRoute (RBAC Wrapper)
+   SkySignal — ProtectedRoute (RBAC Wrapper)
    Restricts Admin Command pages (Verification Queue, Duplicate
    Review, Audit Log) to authenticated Analysts.
    If a Guest attempts to navigate to a protected route directly

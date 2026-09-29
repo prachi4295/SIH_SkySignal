@@ -1,26 +1,28 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — GeoRadarMap Component
-   Centered on India [20.5937, 78.9629], zoom 5
-   Atmospheric dark/light tiles, leaflet.markercluster,
-   Custom SVG marker pins colored by severity, keyboard accessible
+   SkySignal — GeoRadarMap Component
+   Centered on user location by default with live radar beacon,
+   interactive search flyTo (zoom 14), and marker clusters.
    ═══════════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import { useTranslation } from 'react-i18next';
 import {
   Maximize2,
   Minimize2,
   RotateCcw,
-  Zap,
-  ShieldAlert,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { WeatherEvent } from '../../types/weather';
 import { SEVERITY_CONFIG } from '../../data/mock';
 import { useAuth } from '../../context/AuthContext';
+import { useUserLocation } from '../../context/LocationContext';
 
 interface GeoRadarMapProps {
   events: WeatherEvent[];
@@ -29,10 +31,9 @@ interface GeoRadarMapProps {
   height?: string;
 }
 
-const INDIA_CENTER: [number, number] = [20.5937, 78.9629];
-const DEFAULT_ZOOM = 5;
+const DEFAULT_ZOOM = 16;
 
-// Tile Providers (Standard OpenStreetMap — completely free & open source, no API key required)
+// Tile Providers (Standard OpenStreetMap with high-res Retina support)
 const TILE_LAYERS = {
   dark: {
     name: 'OpenStreetMap',
@@ -64,45 +65,83 @@ export default function GeoRadarMap({
   height = 'h-[500px]',
 }: GeoRadarMapProps) {
   const { isAdmin } = useAuth();
+  const { location: userLoc } = useUserLocation();
+  const { i18n } = useTranslation();
+  const isHindi = i18n?.language === 'hi';
+
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const markersMapRef = useRef<Record<string, L.Marker>>({});
 
-  const [activeTheme, setActiveTheme] = useState<'dark' | 'light'>('dark');
-  const [filterSeverity, setFilterSeverity] = useState<'all' | 'severe'>('all');
+  const [activeTheme] = useState<'dark' | 'light'>('dark');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
 
-  // Filter events
-  const displayEvents = useMemo(() => {
-    if (filterSeverity === 'severe') {
-      return events.filter((e) => e.severity === 'severe');
-    }
-    return events;
-  }, [events, filterSeverity]);
+  // Severity counts
+  const severeCount = events.filter((e) => e.severity === 'severe').length;
+  const moderateCount = events.filter((e) => e.severity === 'moderate').length;
+  const minorCount = events.filter((e) => e.severity === 'minor').length;
 
-  // Map Initialization
+  // Map Initialization pointing by default to exact user location
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
+    const initialCenter: [number, number] = [userLoc.lat, userLoc.lng];
+
     const map = L.map(mapContainerRef.current, {
-      center: INDIA_CENTER,
+      center: initialCenter,
       zoom: DEFAULT_ZOOM,
       zoomControl: false,
       attributionControl: false,
       minZoom: 4,
-      maxZoom: 14,
+      maxZoom: 19,
     });
 
     const tile = L.tileLayer(TILE_LAYERS[activeTheme].url, {
       maxZoom: 19,
+      maxNativeZoom: 19,
+      detectRetina: true,
       attribution: TILE_LAYERS[activeTheme].attribution,
     }).addTo(map);
 
     tileLayerRef.current = tile;
 
-    // Cluster Group
+    // User Location Beacon Marker
+    const userBeaconIcon = L.divIcon({
+      html: `
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;">
+          <div style="position: absolute; width: 44px; height: 44px; border-radius: 9999px; background: rgba(14, 165, 233, 0.45); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="position: relative; width: 32px; height: 32px; border-radius: 9999px; background: #0284c7; border: 2.5px solid #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-size: 15px; color: white;">
+            📍
+          </div>
+        </div>
+      `,
+      className: 'user-location-beacon',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18],
+    });
+
+    const userMarker = L.marker(initialCenter, {
+      icon: userBeaconIcon,
+      zIndexOffset: 1000,
+    }).addTo(map);
+
+    userMarker.bindPopup(`
+      <div style="font-family: inherit; padding: 4px; text-align: center; min-width: 160px;">
+        <div style="font-size: 11px; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">📍 Your Location</div>
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px;">${userLoc.cityName}</div>
+        <div style="font-size: 12px; color: #475569; font-weight: 600; margin-top: 2px;">${userLoc.tempC}°c ${userLoc.weatherIcon} · ${userLoc.condition}</div>
+      </div>
+    `);
+
+    userMarkerRef.current = userMarker;
+
+    // Cluster Group for Weather Events
     const clusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 40,
@@ -137,6 +176,77 @@ export default function GeoRadarMap({
     };
   }, []);
 
+  // Listen for search / event recenter events (spread view 12-13)
+  useEffect(() => {
+    const handleRecenter = (e: Event) => {
+      const custom = e as CustomEvent<{
+        lat: number;
+        lng: number;
+        zoom?: number;
+        name?: string;
+        isReset?: boolean;
+        eventId?: string;
+      }>;
+      if (custom.detail && mapInstanceRef.current) {
+        const map = mapInstanceRef.current;
+        map.invalidateSize();
+
+        const targetZoom = custom.detail.zoom || (custom.detail.isReset ? 13 : 16);
+        map.flyTo(
+          [custom.detail.lat, custom.detail.lng],
+          targetZoom,
+          { duration: 1.1 }
+        );
+
+        if (custom.detail.isReset && userMarkerRef.current) {
+          userMarkerRef.current.openPopup();
+        } else if (custom.detail.eventId) {
+          const attemptOpenPopup = (retries = 5) => {
+            const targetMarker = markersMapRef.current[custom.detail.eventId!];
+            if (targetMarker) {
+              if (clusterGroupRef.current) {
+                try {
+                  clusterGroupRef.current.zoomToShowLayer(targetMarker, () => {
+                    targetMarker.openPopup();
+                  });
+                } catch {
+                  targetMarker.openPopup();
+                }
+              } else {
+                targetMarker.openPopup();
+              }
+            } else if (retries > 0) {
+              setTimeout(() => attemptOpenPopup(retries - 1), 200);
+            }
+          };
+          setTimeout(() => attemptOpenPopup(), 300);
+        }
+      }
+    };
+
+    window.addEventListener('skysignal:recenter-map', handleRecenter);
+    return () => window.removeEventListener('skysignal:recenter-map', handleRecenter);
+  }, []);
+
+  // Update user marker & fly to exact location if location state changes
+  useEffect(() => {
+    if (userLoc && mapInstanceRef.current && userMarkerRef.current) {
+      userMarkerRef.current.setLatLng([userLoc.lat, userLoc.lng]);
+      userMarkerRef.current.setPopupContent(`
+        <div style="font-family: inherit; padding: 4px; text-align: center; min-width: 160px;">
+          <div style="font-size: 11px; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">📍 Your Location</div>
+          <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px;">${userLoc.cityName}</div>
+          <div style="font-size: 12px; color: #475569; font-weight: 600; margin-top: 2px;">${userLoc.tempC}°c ${userLoc.weatherIcon} · ${userLoc.condition}</div>
+        </div>
+      `);
+      mapInstanceRef.current.flyTo(
+        [userLoc.lat, userLoc.lng],
+        13,
+        { duration: 1.2 }
+      );
+    }
+  }, [userLoc.lat, userLoc.lng, userLoc.cityName, userLoc.tempC, userLoc.weatherIcon, userLoc.condition]);
+
   // Handle Theme Change
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
@@ -154,48 +264,37 @@ export default function GeoRadarMap({
     if (!cluster) return;
 
     cluster.clearLayers();
+    markersMapRef.current = {};
 
-    displayEvents.forEach((evt) => {
+    events.forEach((evt) => {
       const isSevere = evt.severity === 'severe';
       const isModerate = evt.severity === 'moderate';
-
-      // Severity Color Tokens
-      // Minor: Emerald (#10b981), Moderate: Sky Blue (#0284c7), Severe: Crimson (#ef4444)
-      const pinColor = isSevere ? '#ef4444' : isModerate ? '#0284c7' : '#10b981';
       const sevConfig = SEVERITY_CONFIG[evt.severity];
+
+      const pinColor = isSevere ? '#ef4444' : isModerate ? '#0284c7' : '#10b981';
+      const glowColor = isSevere ? 'rgba(239, 68, 68, 0.4)' : 'rgba(2, 132, 199, 0.3)';
+
       const svgIcon = SVG_ICONS[evt.category] || SVG_ICONS.rainfall;
 
-      const markerHtml = `
-        <div
-          class="relative group ${isAdmin ? 'cursor-pointer hover:scale-125' : 'cursor-default'} flex items-center justify-center focus:outline-none"
-          ${isAdmin ? 'tabindex="0" role="button"' : ''}
-          aria-label="${evt.title} in ${evt.city}, ${evt.state}. Severity: ${evt.severity}"
-          id="marker-${evt.id}"
-        >
-          ${
-            isSevere
-              ? `<span class="absolute -inset-3 rounded-full bg-red-500/40 animate-ping pointer-events-none"></span>`
-              : ''
-          }
-          <div
-            class="relative w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-125 focus:ring-4 focus:ring-sky-400"
-            style="background: ${pinColor}; border: 2.5px solid #ffffff; color: #ffffff;"
-          >
-            ${svgIcon}
-          </div>
-          <span
-            class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border border-white flex items-center justify-center text-[8px] font-black text-white ${
-              isSevere ? 'bg-red-700' : isModerate ? 'bg-sky-600' : 'bg-emerald-600'
-            }"
-          >
-            ${sevConfig?.icon || '●'}
-          </span>
-        </div>
-      `;
-
       const customIcon = L.divIcon({
-        html: markerHtml,
-        className: 'weather-radar-pin',
+        html: `
+          <div
+            id="marker-${evt.id}"
+            tabindex="0"
+            role="button"
+            aria-label="${evt.title}, ${evt.city}, ${evt.state}, Severity: ${evt.severity}"
+            class="group cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-125 focus:scale-125 focus:outline-none"
+            style="width: 32px; height: 32px;"
+          >
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg ${isSevere ? 'animate-pulse' : ''}"
+              style="background-color: ${pinColor}; box-shadow: 0 0 12px ${glowColor}; border: 2px solid #ffffff;"
+            >
+              ${svgIcon}
+            </div>
+          </div>
+        `,
+        className: 'custom-weather-pin',
         iconSize: [32, 32],
         iconAnchor: [16, 16],
         popupAnchor: [0, -18],
@@ -206,9 +305,8 @@ export default function GeoRadarMap({
       });
       (marker.options as any).isSevere = isSevere;
 
-      // Interactive Popup
       const popupContent = `
-        <div style="font-family: Outfit, sans-serif; min-width: 230px; padding: 4px;">
+        <div style="font-family: inherit; min-width: 230px; padding: 4px;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
             <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 9999px; ${
               isSevere
@@ -220,7 +318,7 @@ export default function GeoRadarMap({
               ${sevConfig?.icon} ${sevConfig?.label}
             </span>
             <span style="font-size: 11px; font-weight: 700; color: #0284c7;">
-              ${evt.confidence}% AI Conf.
+              ${evt.confidence}% AI Match
             </span>
           </div>
           <h4 style="font-size: 13px; font-weight: 700; color: #0f172a; margin: 0 0 3px 0; line-height: 1.3;">
@@ -229,64 +327,23 @@ export default function GeoRadarMap({
           <p style="font-size: 11px; color: #475569; margin: 0 0 6px 0;">
             📍 ${evt.city}, ${evt.state}
           </p>
-          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #64748b; padding-top: 6px; border-top: 1px solid #e2e8f0; margin-bottom: 8px;">
-            <span>Sources: <strong>${evt.independent_source_count} platforms</strong></span>
-            <span>Reports: <strong>${evt.evidence_summary?.citizen_reports ?? 14} citizen</strong></span>
-          </div>
-          ${
-            isAdmin
-              ? `<button id="inspect-btn-${evt.id}" style="width: 100%; background: #0284c7; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                  Review Event Details &rarr;
-                </button>`
-              : `<div style="text-align: center; font-size: 11px; color: #64748b; padding: 5px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 600;">
-                  Public Weather Telemetry (Read-Only)
-                </div>`
-          }
         </div>
       `;
 
       marker.bindPopup(popupContent, { maxWidth: 280 });
 
-      // Click & Popup actions (Admin only opens drawer)
       marker.on('click', () => {
-        if (isAdmin) {
-          onSelectEvent?.(evt);
-        }
+        onSelectEvent?.(evt);
       });
 
-      marker.on('popupopen', () => {
-        if (isAdmin) {
-          const btn = document.getElementById(`inspect-btn-${evt.id}`);
-          if (btn) {
-            btn.onclick = () => onSelectEvent?.(evt);
-          }
-        }
-      });
-
-      // Keyboard accessibility (Enter / Space) - Admin only
-      if (isAdmin) {
-        marker.on('add', () => {
-          setTimeout(() => {
-            const el = document.getElementById(`marker-${evt.id}`);
-            if (el) {
-              el.addEventListener('keydown', (e: KeyboardEvent) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelectEvent?.(evt);
-                }
-              });
-            }
-          }, 100);
-        });
-      }
-
+      markersMapRef.current[evt.id] = marker;
       cluster.addLayer(marker);
     });
-  }, [displayEvents, onSelectEvent, isAdmin]);
+  }, [events, onSelectEvent, isAdmin]);
 
   // Controls
-  const handleResetView = () => {
-    mapInstanceRef.current?.flyTo(INDIA_CENTER, DEFAULT_ZOOM, { duration: 1.2 });
+  const handleResetToUser = () => {
+    mapInstanceRef.current?.flyTo([userLoc.lat, userLoc.lng], 13, { duration: 1.2 });
   };
 
   const handleZoomIn = () => mapInstanceRef.current?.zoomIn();
@@ -299,160 +356,160 @@ export default function GeoRadarMap({
 
   return (
     <div
-      className={`glass-card overflow-hidden flex flex-col transition-all duration-300 ${
-        isFullscreen ? 'fixed inset-4 z-50 shadow-2xl' : ''
-      } ${className}`}
+      className={`relative w-full ${isFullscreen ? 'fixed inset-0 z-50 h-screen bg-slate-900' : height} ${className}`}
     >
-      {/* ── Topbar / Map Header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
-            <h2 className="text-[14px] font-bold text-slate-900 font-['Outfit']">
-              Live Geo-Radar Monitoring
-            </h2>
-          </div>
+      <div ref={mapContainerRef} className="w-full h-full" />
 
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-              Doppler Feed Active
-            </span>
-          </div>
-        </div>
+      {/* Floating Map Controls — z-[1000] strictly above all Leaflet panes and tile layers */}
+      <div className="absolute top-3.5 right-3.5 z-[1000] flex flex-col gap-1.5 shadow-xl rounded-2xl bg-white/95 backdrop-blur-md p-1 border-2 border-slate-200">
+        <button
+          onClick={handleResetToUser}
+          className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-600 transition-all cursor-pointer shadow-xs active:scale-95"
+          title="Recenter on Your Location"
+          aria-label="Recenter on your location"
+        >
+          <RotateCcw size={16} />
+        </button>
 
-        {/* Controls & Quick Filter */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Severity Filter Toggle */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-[11px] font-semibold">
-            <button
-              onClick={() => setFilterSeverity('all')}
-              className={`px-2.5 py-1 rounded-lg transition-colors ${
-                filterSeverity === 'all'
-                  ? 'bg-white text-slate-900 shadow-xs font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              All Events ({events.length})
-            </button>
-            <button
-              onClick={() => setFilterSeverity('severe')}
-              className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 ${
-                filterSeverity === 'severe'
-                  ? 'bg-red-600 text-white shadow-xs font-bold'
-                  : 'text-red-600 hover:bg-red-50'
-              }`}
-            >
-              <ShieldAlert size={12} />
-              <span>Severe Hazards ({events.filter((e) => e.severity === 'severe').length})</span>
-            </button>
-          </div>
+        <button
+          onClick={handleZoomIn}
+          className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-800 hover:text-sky-600 font-extrabold text-[16px] transition-all cursor-pointer shadow-xs active:scale-95"
+          title="Zoom In"
+          aria-label="Zoom in"
+        >
+          +
+        </button>
 
-          {/* Atmospheric Theme Toggle */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-[10px] font-bold">
-            <button
-              onClick={() => setActiveTheme('dark')}
-              className={`px-2.5 py-1 rounded-lg transition-colors ${
-                activeTheme === 'dark'
-                  ? 'bg-slate-900 text-sky-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Obsidian Dark
-            </button>
-            <button
-              onClick={() => setActiveTheme('light')}
-              className={`px-2.5 py-1 rounded-lg transition-colors ${
-                activeTheme === 'light'
-                  ? 'bg-white text-sky-700 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Voyager Light
-            </button>
-          </div>
+        <button
+          onClick={handleZoomOut}
+          className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-800 hover:text-sky-600 font-extrabold text-[16px] transition-all cursor-pointer shadow-xs active:scale-95"
+          title="Zoom Out"
+          aria-label="Zoom out"
+        >
+          −
+        </button>
 
-          {/* Reset View & Fullscreen */}
-          <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
-            <button
-              onClick={handleResetView}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Reset India Center View"
-              aria-label="Reset India View"
-            >
-              <RotateCcw size={15} />
-            </button>
-            <button
-              onClick={toggleFullscreen}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Map'}
-              aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-            >
-              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={toggleFullscreen}
+          className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-600 transition-all cursor-pointer shadow-xs active:scale-95"
+          title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Map'}
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+        >
+          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
       </div>
 
-      {/* ── Map Container ── */}
-      <div className="relative flex-1 w-full overflow-hidden">
-        <div
-          ref={mapContainerRef}
-          className={`w-full ${isFullscreen ? 'h-full' : height} z-0`}
-          style={{ minHeight: isFullscreen ? 'calc(100vh - 120px)' : '460px' }}
-        />
+      {/* ── Interactive Map Legend (Bottom-Left) ── */}
+      <div className="absolute bottom-4 left-4 z-[1000] transition-all duration-200">
+        {isLegendOpen ? (
+          <div className="bg-white/95 backdrop-blur-md border-2 border-slate-200 shadow-xl rounded-2xl p-3.5 w-64 max-w-[calc(100vw-2.5rem)] text-slate-800 animate-fade-in">
+            {/* Legend Header */}
+            <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-1 rounded-lg bg-sky-100 text-sky-700">
+                  <Layers size={14} />
+                </div>
+                <span className="font-extrabold text-[12.5px] text-slate-900 tracking-tight">
+                  {isHindi ? 'मानचित्र संकेत' : 'Map Legend'}
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  {events.length}
+                </span>
+              </div>
+              <button
+                onClick={() => setIsLegendOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                title={isHindi ? 'संकेत छिपाएँ' : 'Collapse legend'}
+                aria-label="Collapse legend"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
 
-        {/* Custom Zoom Buttons */}
-        <div className="absolute top-4 right-4 z-[400] flex flex-col gap-1 shadow-md rounded-xl overflow-hidden border border-white/80 bg-white/90 backdrop-blur-md">
-          <button
-            onClick={handleZoomIn}
-            className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 transition-colors border-b border-slate-100 cursor-pointer"
-            aria-label="Zoom in"
-          >
-            +
-          </button>
-          <button
-            onClick={handleZoomOut}
-            className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            aria-label="Zoom out"
-          >
-            −
-          </button>
-        </div>
+            {/* Severity Levels */}
+            <div className="space-y-1.5 text-[11.5px]">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 pb-0.5">
+                {isHindi ? 'गंभीरता स्तर' : 'Hazard Severity'}
+              </div>
 
-        {/* Severity Legend */}
-        <div className="absolute bottom-4 left-4 z-[400] bg-slate-900/90 text-white backdrop-blur-md rounded-2xl border border-slate-700/80 p-3 shadow-xl max-w-xs hidden sm:block">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-            Severity Taxonomy & Radar Pins
+              {/* Severe */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border border-white shadow-xs"></span>
+                  </span>
+                  <span className="font-semibold text-slate-700">
+                    {isHindi ? 'गंभीर (रेड अलर्ट)' : 'Severe (Red Alert)'}
+                  </span>
+                </div>
+                <span className="font-bold text-[11px] px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                  {severeCount}
+                </span>
+              </div>
+
+              {/* Moderate */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-full h-3 w-3 bg-sky-500 border border-white shadow-xs"></span>
+                  <span className="font-semibold text-slate-700">
+                    {isHindi ? 'मध्यम (ऑरेंज अलर्ट)' : 'Moderate (Orange)'}
+                  </span>
+                </div>
+                <span className="font-bold text-[11px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                  {moderateCount}
+                </span>
+              </div>
+
+              {/* Minor */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-white shadow-xs"></span>
+                  <span className="font-semibold text-slate-700">
+                    {isHindi ? 'मामूली (येलो अलर्ट)' : 'Minor (Yellow)'}
+                  </span>
+                </div>
+                <span className="font-bold text-[11px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {minorCount}
+                </span>
+              </div>
+            </div>
+
+            {/* Map Markers Section */}
+            <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1.5 text-[11px]">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 pb-0.5">
+                {isHindi ? 'मानचित्र मार्कर' : 'Map Indicators'}
+              </div>
+
+              <div className="flex items-center gap-2 text-slate-600 font-medium">
+                <div className="w-4 h-4 rounded-full bg-blue-600/20 border-2 border-blue-600 flex items-center justify-center shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></div>
+                </div>
+                <span>{isHindi ? 'आपका स्थान (जीपीएस / रडार)' : 'Your Location (GPS Beacon)'}</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-slate-600 font-medium">
+                <div className="w-4 h-4 rounded-full bg-sky-500 text-white text-[9px] font-black flex items-center justify-center border border-white shadow-xs shrink-0">
+                  3+
+                </div>
+                <span>{isHindi ? 'इवेंट क्लस्टर (समूह)' : 'Event Cluster (Multi-source)'}</span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1.5 text-[11px]">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-              <span className="font-bold text-red-400">◆ Severe (Radar Ping)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-sky-500" />
-              <span className="font-bold text-sky-400">▲ Moderate Hazard</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-emerald-500" />
-              <span className="font-bold text-emerald-400">● Minor Observation</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Events Pill */}
-        <div className="absolute top-4 left-4 z-[400] bg-slate-900/90 text-white backdrop-blur-md rounded-xl border border-slate-700/80 px-3 py-1.5 shadow-md flex items-center gap-2">
-          <Zap size={13} className="text-amber-400" />
-          <span className="text-[11px] font-bold">
-            {displayEvents.length} Clustered Pins
-          </span>
-          <span className="text-slate-500 text-[10px]">· India [20.59°N, 78.96°E]</span>
-        </div>
+        ) : (
+          <button
+            onClick={() => setIsLegendOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/95 backdrop-blur-md border-2 border-slate-200 shadow-lg text-slate-700 hover:text-sky-700 hover:bg-sky-50 font-bold text-[12px] transition-all cursor-pointer active:scale-95"
+            title={isHindi ? 'मानचित्र संकेत दिखाएँ' : 'Show map legend'}
+            aria-label="Show map legend"
+          >
+            <Layers size={15} className="text-sky-600" />
+            <span>{isHindi ? 'मानचित्र संकेत' : 'Map Legend'}</span>
+            <ChevronUp size={14} className="text-slate-400" />
+          </button>
+        )}
       </div>
+
     </div>
   );
 }

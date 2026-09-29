@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Interactive Leaflet Geo-Radar Map
+   SkySignal — Interactive Leaflet Geo-Radar Map
    National Weather Intelligence Platform (IMD / SIH26069)
    Pure Leaflet + Marker Clustering + Custom Glass Overlays
    ═══════════════════════════════════════════════════════ */
@@ -65,7 +65,7 @@ const TILE_LAYERS = {
 
 // Map center of India
 const INDIA_CENTER: [number, number] = [21.5, 79.5];
-const DEFAULT_ZOOM = 4.8;
+const DEFAULT_ZOOM = 16;
 
 // SVG icons mapping for Leaflet divIcon
 const SVG_ICONS: Record<WeatherCategory, string> = {
@@ -258,7 +258,7 @@ export default function GeoRadarMap({
 
       // Rich Glassmorphic Leaflet Popup
       const popupHtml = `
-        <div style="font-family: Outfit, sans-serif; min-width: 220px; padding: 4px;">
+        <div style="font-family: var(--font-sans); min-width: 220px; padding: 4px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
             <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 9999px; ${
               evt.severity === 'severe'
@@ -437,10 +437,10 @@ export default function GeoRadarMap({
             </button>
             <button
               onClick={() => setActiveLayer('dark')}
-              title="Obsidian Night Map"
+              title="Dark Mode Map"
               className={`px-2 py-1 text-[10px] font-semibold rounded ${
                 activeLayer === 'dark'
-                  ? 'bg-slate-900 text-sky-400 shadow-xs'
+                  ? 'bg-[#2d2a27] text-amber-400 shadow-xs'
                   : 'text-[var(--color-text-tertiary)]'
               }`}
             >
@@ -490,71 +490,25 @@ export default function GeoRadarMap({
         />
 
         {/* Floating Custom Zoom Controls */}
-        <div className="absolute top-4 right-4 z-[400] flex flex-col gap-1 shadow-md rounded-xl overflow-hidden border border-white/80 bg-white/90 backdrop-blur-md">
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-1 shadow-md rounded-xl overflow-hidden border border-white/80 bg-white/95 backdrop-blur-md">
           <button
             onClick={handleZoomIn}
-            className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors border-b border-slate-100"
+            className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors border-b border-slate-100 cursor-pointer"
             aria-label="Zoom in"
           >
             +
           </button>
           <button
             onClick={handleZoomOut}
-            className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
             aria-label="Zoom out"
           >
             −
           </button>
         </div>
 
-        {/* Bottom Legend Overlay */}
-        <div className="absolute bottom-4 left-4 z-[400] bg-white/92 backdrop-blur-md rounded-xl border border-slate-200/80 p-2.5 shadow-md max-w-sm hidden sm:block">
-          <div className="flex items-center justify-between gap-4 mb-2">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Active Hazard Types
-            </span>
-            <span className="text-[10px] font-semibold text-sky-600">
-              {filteredEvents.length} Pins Clustered
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-2 text-[10px] font-medium text-slate-700">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-              <span>Rainfall</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-              <span>Thunder</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-600" />
-              <span>Flooding</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-              <span>Heatwave</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
-              <span>Fog</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-600" />
-              <span>Dust Storm</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-600" />
-              <span>Wind</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-red-600 font-bold">
-              <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
-              <span>Severe ◆</span>
-            </div>
-          </div>
-        </div>
-
         {/* Quick Stats Overlay Pill */}
-        <div className="absolute top-4 left-4 z-[400] bg-white/92 backdrop-blur-md rounded-xl border border-slate-200/80 px-3 py-1.5 shadow-md flex items-center gap-3">
+        <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/80 px-3 py-1.5 shadow-md flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-800">
             <Zap size={14} className="text-amber-500" />
             <span>{filteredEvents.length} Active Events</span>

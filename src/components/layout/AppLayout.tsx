@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Responsive Master-Detail App Layout
+   SkySignal — Responsive Master-Detail App Layout
    ObsidianSidebar (228px fixed desktop / off-canvas mobile)
    + Sticky Topbar with breadcrumbs & IST clock
    + Ambient glassmorphic canvas
@@ -10,13 +10,16 @@ import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ObsidianSidebar from './ObsidianSidebar';
 import Topbar from './Topbar';
+import NavigationBar from './NavigationBar';
 import AdminLoginModal from '../auth/AdminLoginModal';
+import LocationGateModal from '../location/LocationGateModal';
 import TelemetryToast from '../telemetry/TelemetryToast';
 import EventDetailDrawer from '../events/EventDetailDrawer';
+import FloatingSOSButton from '../citizen/FloatingSOSButton';
 
 export default function AppLayout() {
   const { isAdmin } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [inspectedTelemetryEvent, setInspectedTelemetryEvent] = useState<any | null>(null);
 
   return (
@@ -24,16 +27,19 @@ export default function AppLayout() {
       {/* Ambient Atmospheric Radial Background Glow */}
       <div className="ambient-glow" aria-hidden="true" />
 
-      {/* ── Fixed / Off-canvas Obsidian Sidebar (width 228px) ── */}
+      {/* ── Slide-over Obsidian Sidebar Drawer ── */}
       <ObsidianSidebar
-        mobileOpen={mobileMenuOpen}
-        onCloseMobile={() => setMobileMenuOpen(false)}
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
       />
 
-      {/* ── Main App Shell Area (Consistent 228px offset on Desktop to prevent layout shifts) ── */}
-      <div className="md:pl-[228px] flex-1 flex flex-col min-w-0 transition-all duration-300">
+      {/* ── Main App Shell Area (Full width) ── */}
+      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         {/* Sticky Topbar */}
-        <Topbar onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
+        <Topbar />
+
+        {/* Sticky Horizontal Navigation Bar with Menu Toggle */}
+        <NavigationBar onToggleMenu={() => setMenuOpen(!menuOpen)} />
 
         {/* Routed Page Content */}
         <main className="relative flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
@@ -52,8 +58,14 @@ export default function AppLayout() {
         />
       )}
 
+      {/* ── Floating SOS Emergency Dispatch (Citizen View Only) ── */}
+      {!isAdmin && <FloatingSOSButton />}
+
       {/* ── Admin Login Modal ── */}
       <AdminLoginModal />
+
+      {/* ── Location Gate Modal (Onboarding & On-Demand Switcher) ── */}
+      <LocationGateModal />
     </div>
   );
 }

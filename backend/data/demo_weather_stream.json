@@ -1,0 +1,104 @@
+[
+  {
+    "id": "OBS-001",
+    "source": "citizen_pwa",
+    "text": "Severe cloudburst reported in North Delhi! Water level rising rapidly on roads, cars partially submerged.",
+    "latitude": 28.7041,
+    "longitude": 77.1025,
+    "timestamp": "2026-09-27T06:15:00Z",
+    "sensor_data": {
+      "rainfall_rate_mmh": 85.0,
+      "temperature_c": 24.5
+    }
+  },
+  {
+    "id": "OBS-002",
+    "source": "citizen_pwa",
+    "text": "मुंबई के दादर और कुर्ला में भीषण जलभराव हो गया है। लोकल ट्रेन सेवा प्रभावित है।",
+    "latitude": 19.0178,
+    "longitude": 72.8478,
+    "timestamp": "2026-09-27T06:20:00Z",
+    "sensor_data": {
+      "rainfall_rate_mmh": 45.0
+    }
+  },
+  {
+    "id": "OBS-003",
+    "source": "traffic_cam_sensor",
+    "text": "Dense winter fog at IGI Airport Runway 28. RVR visibility dropped below 50 meters.",
+    "latitude": 28.5562,
+    "longitude": 77.1000,
+    "timestamp": "2026-09-27T06:10:00Z",
+    "sensor_data": {
+      "humidity_pct": 98.0,
+      "temperature_c": 8.5
+    }
+  },
+  {
+    "id": "OBS-004",
+    "source": "citizen_pwa",
+    "text": "फलोदी और जैसलमेर में भीषण लू चल रही है, दोपहर का तापमान 48 डिग्री पार हो गया है।",
+    "latitude": 27.1310,
+    "longitude": 72.3650,
+    "timestamp": "2026-09-27T06:05:00Z",
+    "sensor_data": {
+      "temperature_c": 48.2
+    }
+  },
+  {
+    "id": "OBS-005",
+    "source": "social_twitter_feed",
+    "text": "⚡ EARN 500$ DAILY WITH BITCOIN TRADING! Join our telegram group now https://t.me/cryptopumps2026 free airdrop",
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "timestamp": "2026-09-27T06:22:00Z"
+  },
+  {
+    "id": "OBS-006",
+    "source": "citizen_pwa",
+    "text": "Anyone going to watch the cricket match live at Eden Gardens tonight?",
+    "latitude": 22.5646,
+    "longitude": 88.3433,
+    "timestamp": "2026-09-27T06:18:00Z"
+  },
+  {
+    "id": "OBS-007",
+    "source": "iot_weather_station",
+    "text": "Extremely high temperature alarm triggered at substation.",
+    "latitude": 26.9124,
+    "longitude": 75.7873,
+    "timestamp": "2026-09-27T06:12:00Z",
+    "sensor_data": {
+      "temperature_c": 92.4,
+      "humidity_pct": 12.0
+    }
+  },
+  {
+    "id": "OBS-008",
+    "source": "citizen_pwa",
+    "text": "Strong cyclonic wind gusts uprooting roadside trees near Marina Beach.",
+    "latitude": -35.2809,
+    "longitude": 149.1300,
+    "timestamp": "2026-09-27T06:00:00Z"
+  },
+  {
+    "id": "OBS-009",
+    "source": "social_rss_feed",
+    "text": "Heavy rain alert from last week during the coastal depression.",
+    "latitude": 13.0827,
+    "longitude": 80.2707,
+    "timestamp": "2026-09-20T10:00:00Z"
+  },
+  {
+    "id": "OBS-010",
+    "source": "citizen_pwa",
+    "text": "Violent thunderstorm and continuous lightning strikes over Bengaluru Electronic City.",
+    "latitude": 12.8452,
+    "longitude": 77.6602,
+    "timestamp": "2026-09-27T06:24:00Z",
+    "sensor_data": {
+      "wind_speed_kmh": 68.0,
+      "rainfall_rate_mmh": 32.0
+    }
+  }
+]

@@ -1,45 +1,40 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Topbar Header
+   SkySignal — Topbar Header
    Sticky top bar with breadcrumbs, Live IST clock,
    pulsing telemetry chip, i18n switcher, notifications,
    and Analyst Auth integration.
    ═══════════════════════════════════════════════════════ */
 
 import { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useUserLocation } from '../../context/LocationContext';
 import {
-  Menu,
   Bell,
-  ChevronRight,
   ShieldCheck,
   ShieldAlert,
   X,
   LogOut,
+  Navigation,
 } from 'lucide-react';
 import { mockWeatherEvents } from '../../lib/mockData';
 
+import LocationSearchBar from '../location/LocationSearchBar';
+
 interface TopbarProps {
-  onToggleMobileMenu: () => void;
+  onToggleMenu?: () => void;
 }
 
-const ROUTE_TITLES: Record<string, { en: string; hi: string }> = {
-  '/': { en: 'Situational Overview', hi: 'स्थिति अवलोकन' },
-  '/explorer': { en: 'Event Explorer', hi: 'घटना एक्सप्लोरर' },
-  '/events': { en: 'Event Explorer', hi: 'घटना एक्सप्लोरर' },
-  '/verification': { en: 'Verification Queue', hi: 'सत्यापन कतार' },
-  '/duplicates': { en: 'Duplicate Review', hi: 'डुप्लिकेट समीक्षा' },
-  '/analytics': { en: 'Analytics Dashboard', hi: 'एनालिटिक्स डैशबोर्ड' },
-  '/audit': { en: 'Audit Log', hi: 'ऑडिट लॉग' },
-  '/report': { en: 'Citizen Portal', hi: 'नागरिक पोर्टल' },
-  '/citizen': { en: 'Citizen Portal', hi: 'नागरिक पोर्टल' },
-};
-
-export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
+export default function Topbar({ onToggleMenu: _onToggleMenu }: TopbarProps = {}) {
   const { i18n } = useTranslation();
-  const location = useLocation();
   const { isAdmin, user, openLoginModal, logout } = useAuth();
+  const {
+    location: userLoc,
+    openModal: openLocationModal,
+    detectGPSLocation,
+    isDetecting,
+  } = useUserLocation();
 
   const isHindi = i18n.language === 'hi';
 
@@ -75,12 +70,6 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const severeAlerts = mockWeatherEvents.filter((e) => e.severity === 'severe');
 
-  // Breadcrumbs determination
-  const currentRouteMeta = ROUTE_TITLES[location.pathname] || {
-    en: 'Command Dashboard',
-    hi: 'कमांड डैशबोर्ड',
-  };
-
   const handleLanguageChange = (lang: 'en' | 'hi') => {
     i18n.changeLanguage(lang);
   };
@@ -90,73 +79,81 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
       className="
         sticky top-0 z-20
         h-[64px]
-        bg-white/80 backdrop-blur-xl border-b border-slate-200/80
-        flex items-center justify-between px-4 sm:px-6
+        bg-white/90 backdrop-blur-xl border-b border-slate-200/80
+        flex items-center justify-between px-4 sm:px-6 gap-3 sm:gap-4
         transition-all duration-200 shadow-xs
       "
     >
-      {/* ── Left: Hamburger Menu & Breadcrumbs ── */}
-      <div className="flex items-center gap-3">
-        {/* Mobile Hamburger Toggle (Available to all users) */}
-        <button
-          onClick={onToggleMobileMenu}
-          className="md:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-          aria-label="Toggle navigation drawer"
+      {/* ── Left: Brand Logo + SkySignal & Location Weather (e.g., Gota, Ahmedabad, Gujarat 30°c ☀️) ── */}
+      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+        {/* Brand Logo & Name */}
+        <Link
+          to="/"
+          className="flex items-center gap-2 sm:gap-2.5 hover:opacity-90 transition-opacity cursor-pointer shrink-0 py-0.5"
+          title="SkySignal Home"
         >
-          <Menu size={20} />
-        </button>
+          <img
+            src="/logo.png"
+            alt="SkySignal Logo"
+            className="w-9 h-9 sm:w-11 sm:h-11 object-contain bg-transparent border-none shadow-none select-none"
+          />
+          <span className="text-[20px] sm:text-[23px] font-black tracking-tight select-none flex items-center leading-none">
+            <span style={{ color: '#2d2a27' }}>Sky</span>
+            <span style={{ color: '#d97706' }}>Signal</span>
+          </span>
+        </Link>
 
-        {/* Breadcrumb Navigation */}
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500"
-        >
-          <Link
-            to="/"
-            className="hover:text-sky-600 transition-colors text-slate-500"
+        {/* Location & Weather Widget on Top Left */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={openLocationModal}
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-100 transition-all cursor-pointer group text-left max-w-[240px] sm:max-w-md"
+            title="Click to change your location or search areas"
           >
-            {isHindi ? 'होम' : 'Home'}
-          </Link>
-          <ChevronRight size={13} className="text-slate-300" />
-          <span className="text-slate-900 font-bold tracking-tight">
-            {isHindi ? currentRouteMeta.hi : currentRouteMeta.en}
-          </span>
-        </nav>
+            <span className="text-[14px] sm:text-[15px] font-black text-slate-800 tracking-tight whitespace-nowrap truncate">
+              {userLoc.cityName}
+              {userLoc.stateName && !userLoc.cityName.toLowerCase().includes(userLoc.stateName.toLowerCase()) ? `, ${userLoc.stateName}` : ''}
+            </span>
+            <span className="flex items-center gap-1 shrink-0 font-extrabold text-slate-800 text-[13px] sm:text-[14px] bg-slate-100/90 px-2 py-0.5 rounded-lg border border-slate-200/70">
+              <span>{userLoc.tempC}°c</span>
+              <span className="text-[16px] leading-none">{userLoc.weatherIcon}</span>
+            </span>
+          </button>
 
-        {/* Public Guest Mode Badge */}
-        {!isAdmin && (
-          <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold">
-            Public View
-          </span>
-        )}
+          {/* Instant GPS Fetch Button */}
+          <button
+            onClick={() => detectGPSLocation()}
+            disabled={isDetecting}
+            className="p-1.5 rounded-lg text-sky-600 hover:text-sky-800 hover:bg-sky-50 transition-all cursor-pointer shrink-0 border border-sky-200/60 shadow-2xs"
+            title={isHindi ? 'मेरा सटीक जीपीएस स्थान प्राप्त करें' : 'Fetch my exact GPS location'}
+          >
+            <Navigation size={15} className={isDetecting ? 'animate-spin text-amber-600' : ''} />
+          </button>
+        </div>
       </div>
 
-      {/* ── Right: Clock, Telemetry Status, i18n, Alerts & Auth ── */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
-        {/* Live IST Digital Clock */}
-        <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-600">
-          <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-          <span>{istTime || '24 Sep 2026 · 14:32:00 IST'}</span>
-        </div>
+      {/* ── Center / Right: Location Search Bar, Clock, i18n, Alerts & Auth ── */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Compact Location Search Bar (Citizen View Only) */}
+        {!isAdmin && (
+          <div className="block">
+            <LocationSearchBar />
+          </div>
+        )}
 
-        {/* Telemetry Status Chip ("LIVE TELEMETRY") */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 shadow-xs">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="text-[10px] font-black uppercase tracking-wider">
-            Live Telemetry
-          </span>
+        {/* Live IST Digital Clock */}
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-600 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span>{istTime || '27 Sep 2026 · 12:47:14 IST'}</span>
         </div>
 
         {/* Language Switch Dropdown (EN / हिन्दी) */}
-        <div className="relative flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-[11px] font-bold">
+        <div className="relative flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-[11px] font-bold shrink-0">
           <button
             onClick={() => handleLanguageChange('en')}
             className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
               !isHindi
-                ? 'bg-white text-sky-700 shadow-xs'
+                ? 'bg-white text-amber-700 shadow-xs font-bold'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -166,7 +163,7 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
             onClick={() => handleLanguageChange('hi')}
             className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
               isHindi
-                ? 'bg-white text-sky-700 shadow-xs'
+                ? 'bg-white text-amber-700 shadow-xs font-bold'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -203,7 +200,7 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-800">
                     <ShieldAlert size={15} className="text-red-600" />
-                    <span>Severe Weather Alerts ({severeAlerts.length})</span>
+                    <span>{isHindi ? `गंभीर मौसम चेतावनियाँ (${severeAlerts.length})` : `Severe Weather Alerts (${severeAlerts.length})`}</span>
                   </div>
                   <button
                     onClick={() => setShowNotifications(false)}
@@ -224,11 +221,11 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
                           {evt.title}
                         </span>
                         <span className="text-[10px] font-black text-red-700 uppercase">
-                          ◆ Severe
+                          {isHindi ? 'गंभीर' : 'Severe'}
                         </span>
                       </div>
                       <div className="text-slate-600">
-                        📍 {evt.city}, {evt.state} · {evt.confidence}% conf.
+                        📍 {evt.city}, {evt.state} · {evt.confidence}% {isHindi ? 'सटीकता' : 'conf.'}
                       </div>
                     </div>
                   ))}
@@ -236,11 +233,11 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
 
                 <div className="text-center pt-1 border-t border-slate-100">
                   <Link
-                    to="/explorer"
+                    to="/"
                     onClick={() => setShowNotifications(false)}
-                    className="text-[11px] font-bold text-sky-600 hover:text-sky-800"
+                    className="text-[11px] font-bold text-amber-600 hover:text-amber-800"
                   >
-                    View All Hazards in Explorer &rarr;
+                    {isHindi ? 'सभी मौसम खतरे देखें →' : 'View All Weather Hazards →'}
                   </Link>
                 </div>
               </div>
@@ -253,19 +250,19 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={openLoginModal}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-200/80 hover:bg-sky-100/80 transition-all cursor-pointer shadow-xs"
-              title="Analyst Profile & Settings"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200/80 hover:bg-amber-100/80 transition-all cursor-pointer shadow-xs"
+              title={isHindi ? 'विश्लेषक प्रोफ़ाइल और सेटिंग्स' : 'Analyst Profile & Settings'}
               aria-label="Analyst Profile Settings"
             >
-              <div className="w-6 h-6 rounded-lg bg-sky-600 text-white font-bold text-[10px] flex items-center justify-center shadow-xs">
+              <div className="w-6 h-6 rounded-lg bg-amber-600 text-white font-bold text-[10px] flex items-center justify-center shadow-xs">
                 {user.name.charAt(0)}
               </div>
               <div className="hidden sm:block text-left">
                 <div className="text-[11px] font-bold text-slate-800 leading-tight">
                   {user.name.split(' ')[0]}
                 </div>
-                <div className="text-[9px] text-sky-700 font-semibold uppercase tracking-wider">
-                  Analyst Active
+                <div className="text-[9px] text-amber-700 font-semibold uppercase tracking-wider">
+                  {isHindi ? 'सक्रिय विश्लेषक' : 'Analyst Active'}
                 </div>
               </div>
             </button>
@@ -274,21 +271,21 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
             <button
               onClick={logout}
               className="px-2.5 py-1.5 rounded-xl text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
-              title="Logout Analyst Session"
+              title={isHindi ? 'विश्लेषक सत्र समाप्त करें' : 'Logout Analyst Session'}
               aria-label="Logout Analyst Session"
             >
               <LogOut size={14} />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">{isHindi ? 'लॉगआउट' : 'Logout'}</span>
             </button>
           </div>
         ) : (
           <button
             onClick={openLoginModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[12px] font-bold transition-all shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2d2a27] hover:bg-[#3d3935] text-white text-[12px] font-bold transition-all shadow-sm cursor-pointer"
           >
-            <ShieldCheck size={14} className="text-sky-400" />
-            <span className="hidden sm:inline">Analyst Login</span>
-            <span className="sm:hidden">Login</span>
+            <ShieldCheck size={14} className="text-amber-400" />
+            <span className="hidden sm:inline">{isHindi ? 'विश्लेषक लॉगिन' : 'Analyst Login'}</span>
+            <span className="sm:hidden">{isHindi ? 'लॉगिन' : 'Login'}</span>
           </button>
         )}
       </div>

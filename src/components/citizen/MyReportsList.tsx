@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — My Citizen Reports List
+   SkySignal — My Citizen Reports List
    Displays submissions tagged with anonymous X-Device-Id
    Badges: "Pending Verification", "Verified", "Merged into Cluster", "Synced Late"
    ═══════════════════════════════════════════════════════ */
@@ -38,7 +38,7 @@ const DEFAULT_DEMO_REPORTS: QueuedReport[] = [
     city: 'Bandra West, Mumbai',
     state: 'Maharashtra',
     raw_text: 'Waterlogged above knee height near SV road junction. Vehicles stalling.',
-    media_urls: ['https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=600&q=80'],
+    media_urls: ['/images/rain/1.jpg'],
     device_id: 'DEV-INITIAL',
     created_at: new Date(Date.now() - 45 * 60_000).toISOString(),
     synced: true,
@@ -196,29 +196,50 @@ export default function MyReportsList({ refreshTrigger }: MyReportsListProps) {
                       className="px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize"
                       style={{ backgroundColor: catConfig?.bgColor, color: catConfig?.color }}
                     >
-                      {report.event_category}
+                      {isHindi
+                        ? report.event_category === 'rainfall'
+                          ? 'भारी बारिश'
+                          : report.event_category === 'thunderstorm'
+                          ? 'गरज-तूफान'
+                          : report.event_category === 'flooding'
+                          ? 'बाढ़'
+                          : report.event_category === 'heatwave'
+                          ? 'भीषण गर्मी'
+                          : report.event_category === 'fog'
+                          ? 'कोहरा'
+                          : report.event_category === 'dust storm'
+                          ? 'धूल भरी आंधी'
+                          : 'तेज हवा'
+                        : report.event_category}
                     </span>
 
                     {/* Severity Badge */}
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sevConfig?.className}`}>
-                      {sevConfig?.icon} {sevConfig?.label}
+                      {sevConfig?.icon}{' '}
+                      {isHindi
+                        ? report.severity === 'minor'
+                          ? 'सामान्य'
+                          : report.severity === 'moderate'
+                          ? 'मध्यम'
+                          : 'गंभीर'
+                        : sevConfig?.label}
                     </span>
 
                     {/* Status Badge */}
                     {report.status === 'verified' ? (
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center gap-1">
                         <CheckCircle2 size={11} />
-                        <span>Verified</span>
+                        <span>{isHindi ? 'सत्यापित' : 'Verified'}</span>
                       </span>
                     ) : report.status === 'merged' ? (
                       <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px] flex items-center gap-1">
                         <GitMerge size={11} />
-                        <span>Merged into Cluster</span>
+                        <span>{isHindi ? 'क्लस्टर में विलय' : 'Merged into Cluster'}</span>
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] flex items-center gap-1">
                         <Clock size={11} />
-                        <span>Pending Verification</span>
+                        <span>{isHindi ? 'सत्यापन लंबित' : 'Pending Verification'}</span>
                       </span>
                     )}
 
@@ -226,7 +247,7 @@ export default function MyReportsList({ refreshTrigger }: MyReportsListProps) {
                     {report.synced_late && (
                       <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 font-bold text-[10px] flex items-center gap-1 border border-orange-200">
                         <AlertCircle size={10} />
-                        <span>Synced Late</span>
+                        <span>{isHindi ? 'देरी से सिंक' : 'Synced Late'}</span>
                       </span>
                     )}
 
@@ -234,7 +255,7 @@ export default function MyReportsList({ refreshTrigger }: MyReportsListProps) {
                     {!report.synced && (
                       <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center gap-1">
                         <WifiOff size={10} />
-                        <span>Offline Queued</span>
+                        <span>{isHindi ? 'ऑफ़लाइन कतारबद्ध' : 'Offline Queued'}</span>
                       </span>
                     )}
                   </div>

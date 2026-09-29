@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Duplicate Review Page
+   SkySignal — Duplicate Review Page
    NLP Spatiotemporal Fusion Engine Showcase
    Cluster Header with Syntactic Similarity Index,
    3-Column Evidence Comparison (Citizen vs. Twitter/X vs. News RSS),
@@ -8,10 +8,10 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Copy,
   GitMerge,
-  Sparkles,
   CheckCircle2,
   MapPin,
   Clock,
@@ -28,6 +28,7 @@ import {
 import { getDuplicateClusters } from '../services/mockApi';
 import { CATEGORY_CONFIG } from '../data/mock';
 import type { DuplicateCluster, Report } from '../types/weather';
+import { translateCategory } from '../lib/hindiTranslations';
 
 interface MergedClusterRecord {
   clusterId: string;
@@ -38,6 +39,9 @@ interface MergedClusterRecord {
 }
 
 export default function DuplicateReview() {
+  const { i18n } = useTranslation();
+  const isHindi = i18n.language === 'hi';
+
   const [clusters, setClusters] = useState<DuplicateCluster[]>([]);
   const [loading, setLoading] = useState(true);
   const [mergedRecords, setMergedRecords] = useState<Map<string, MergedClusterRecord>>(new Map());
@@ -118,23 +122,11 @@ export default function DuplicateReview() {
     <div className="space-y-6">
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Copy size={22} className="text-sky-600" />
-            <h1 className="text-[22px] font-black text-slate-900 tracking-tight font-['Outfit']">
-              NLP Duplicate Clustering & Fusion Review
-            </h1>
-          </div>
-          <p className="text-[13px] text-slate-500">
-            Transformer embeddings group corroborated ground signals within 15-minute / 2.5km spatiotemporal windows.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="px-3.5 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 text-[12px] font-bold flex items-center gap-1.5 shadow-2xs">
-            <Sparkles size={14} className="text-purple-600" />
-            <span>MiniLM-L6-v2 Embeddings Active</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <Copy size={22} className="text-sky-600" />
+          <h1 className="text-[22px] font-black text-slate-900 tracking-tight">
+            {isHindi ? 'डुप्लिकेट समीक्षा' : 'Duplicate Review'}
+          </h1>
         </div>
       </div>
 
@@ -159,10 +151,10 @@ export default function DuplicateReview() {
         <div className="flex items-center gap-6 flex-wrap">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-              Pending Fusion Review
+              {isHindi ? 'लंबित फ़्यूज़न समीक्षा' : 'Pending Fusion Review'}
             </span>
-            <div className="text-[24px] font-black text-slate-900 font-['Outfit']">
-              {pendingCount} Clusters
+            <div className="text-[24px] font-black text-slate-900">
+              {pendingCount} {isHindi ? 'क्लस्टर' : 'Clusters'}
             </div>
           </div>
 
@@ -170,10 +162,10 @@ export default function DuplicateReview() {
 
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-              Fused into Canonical Events
+              {isHindi ? 'मानक घटना में विलयित' : 'Fused into Canonical Events'}
             </span>
-            <div className="text-[24px] font-black text-emerald-600 font-['Outfit']">
-              {mergedCount} Merged
+            <div className="text-[24px] font-black text-emerald-600">
+              {mergedCount} {isHindi ? 'विलयित' : 'Merged'}
             </div>
           </div>
 
@@ -181,10 +173,10 @@ export default function DuplicateReview() {
 
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-              Similarity Threshold
+              {isHindi ? 'समानता सीमा' : 'Similarity Threshold'}
             </span>
-            <div className="text-[24px] font-black text-purple-600 font-['Outfit']">
-              &gt; 0.85 Cosine
+            <div className="text-[24px] font-black text-purple-600">
+              &gt; 0.85 {isHindi ? 'कोसाइन' : 'Cosine'}
             </div>
           </div>
         </div>
@@ -199,7 +191,7 @@ export default function DuplicateReview() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            All Clusters ({clusters.length})
+            {isHindi ? `सभी क्लस्टर (${clusters.length})` : `All Clusters (${clusters.length})`}
           </button>
           <button
             onClick={() => setActiveFilter('pending')}
@@ -209,7 +201,7 @@ export default function DuplicateReview() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Pending ({pendingCount})
+            {isHindi ? `लंबित (${pendingCount})` : `Pending (${pendingCount})`}
           </button>
           <button
             onClick={() => setActiveFilter('merged')}
@@ -219,7 +211,7 @@ export default function DuplicateReview() {
                 : 'text-slate-600 hover:text-emerald-700'
             }`}
           >
-            Merged ({mergedCount})
+            {isHindi ? `विलयित (${mergedCount})` : `Merged (${mergedCount})`}
           </button>
         </div>
       </div>
@@ -227,11 +219,11 @@ export default function DuplicateReview() {
       {/* ── Clusters List ── */}
       {loading ? (
         <div className="glass-card py-20 text-center text-slate-400">
-          Loading NLP spatiotemporal duplicate clusters...
+          {isHindi ? 'एनएलपी डुप्लिकेट क्लस्टर लोड हो रहे हैं...' : 'Loading NLP spatiotemporal duplicate clusters...'}
         </div>
       ) : displayClusters.length === 0 ? (
         <div className="glass-card py-16 text-center text-slate-400 rounded-2xl border border-slate-200">
-          No duplicate clusters found in this view.
+          {isHindi ? 'इस दृश्य में कोई डुप्लिकेट क्लस्टर नहीं मिला।' : 'No duplicate clusters found in this view.'}
         </div>
       ) : (
         <div className="space-y-6">
@@ -263,7 +255,7 @@ export default function DuplicateReview() {
                       </span>
 
                       {/* Location */}
-                      <div className="flex items-center gap-1.5 text-[15px] font-black text-slate-900 font-['Outfit']">
+                      <div className="flex items-center gap-1.5 text-[15px] font-black text-slate-900">
                         <MapPin size={16} className="text-sky-600" />
                         <span>{cluster.location_name}</span>
                       </div>
@@ -274,20 +266,22 @@ export default function DuplicateReview() {
                         style={{ backgroundColor: catConfig?.bgColor, color: catConfig?.color }}
                       >
                         <span>{catConfig?.icon}</span>
-                        <span>{dominantCategory}</span>
+                        <span>{translateCategory(dominantCategory, isHindi)}</span>
                       </span>
 
                       {/* Merged Status Badge */}
                       {isMerged && (
                         <span className="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 flex items-center gap-1 border border-emerald-300">
                           <Check size={13} />
-                          <span>Fused into #{mergeRecord?.canonicalEventId}</span>
+                          <span>{isHindi ? `विलयित #${mergeRecord?.canonicalEventId}` : `Fused into #${mergeRecord?.canonicalEventId}`}</span>
                         </span>
                       )}
                     </div>
 
                     <p className="text-[12px] text-slate-500">
-                      Cross-corroborated by 3 independent channels within 12 minutes across a 1.8km radius.
+                      {isHindi
+                        ? '1.8 किमी के दायरे में 12 मिनट के भीतर 3 स्वतंत्र चैनलों द्वारा परस्पर पुष्टीकृत।'
+                        : 'Cross-corroborated by 3 independent channels within 12 minutes across a 1.8km radius.'}
                     </p>
                   </div>
 
@@ -299,10 +293,10 @@ export default function DuplicateReview() {
                       </div>
                       <div>
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Syntactic Similarity
+                          {isHindi ? 'सिंटैक्टिक समानता' : 'Syntactic Similarity'}
                         </div>
                         <div className="text-[14px] font-black text-purple-700">
-                          {similarityPct}% Text Match
+                          {similarityPct}% {isHindi ? 'टेक्स्ट मिलान' : 'Text Match'}
                         </div>
                       </div>
                     </div>
@@ -313,10 +307,10 @@ export default function DuplicateReview() {
                       </div>
                       <div>
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Time Delta
+                          {isHindi ? 'समय अंतराल' : 'Time Delta'}
                         </div>
                         <div className="text-[14px] font-black text-sky-700">
-                          &lt; 8 mins
+                          &lt; 8 {isHindi ? 'मिनट' : 'mins'}
                         </div>
                       </div>
                     </div>
@@ -331,7 +325,7 @@ export default function DuplicateReview() {
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                         <div className="flex items-center gap-2 text-sky-700 font-bold text-[12px]">
                           <Smartphone size={16} />
-                          <span>1. Ground Citizen Telemetry</span>
+                          <span>1. {isHindi ? 'जमीनी नागरिक टेलीमेट्री' : 'Ground Citizen Telemetry'}</span>
                         </div>
                         <span className="font-mono text-[10px] text-slate-400 font-bold">
                           {citizen?.id || 'RPT-001'}
@@ -351,10 +345,10 @@ export default function DuplicateReview() {
                           />
                           <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover/photo:opacity-100 flex items-center justify-center transition-opacity text-white text-[11px] font-bold gap-1">
                             <Eye size={15} />
-                            <span>Inspect Photo</span>
+                            <span>{isHindi ? 'फोटो देखें' : 'Inspect Photo'}</span>
                           </div>
                           <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-semibold">
-                            Geotagged Photo
+                            {isHindi ? 'जियोटैग फोटो' : 'Geotagged Photo'}
                           </span>
                         </div>
                       )}
@@ -367,12 +361,12 @@ export default function DuplicateReview() {
 
                     <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-500 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Device ID:</span>
+                        <span className="text-slate-400">{isHindi ? 'डिवाइस आईडी:' : 'Device ID:'}</span>
                         <span className="font-mono font-bold text-slate-700">{citizen?.source_handle || 'dev-abc123'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Reliability Index:</span>
-                        <span className="font-bold text-emerald-600">96% Ground Truth</span>
+                        <span className="text-slate-400">{isHindi ? 'विश्वसनीयता सूचकांक:' : 'Reliability Index:'}</span>
+                        <span className="font-bold text-emerald-600">{isHindi ? '96% जमीनी सत्य' : '96% Ground Truth'}</span>
                       </div>
                     </div>
                   </div>
@@ -383,7 +377,7 @@ export default function DuplicateReview() {
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                         <div className="flex items-center gap-2 text-indigo-700 font-bold text-[12px]">
                           <MessageCircle size={16} />
-                          <span>2. Vernacular Social Stream</span>
+                          <span>2. {isHindi ? 'स्थानीय सोशल स्ट्रीम' : 'Vernacular Social Stream'}</span>
                         </div>
                         <span className="font-mono text-[10px] text-slate-400 font-bold">
                           {social?.id || 'RPT-002'}
@@ -403,10 +397,10 @@ export default function DuplicateReview() {
                           />
                           <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover/photo:opacity-100 flex items-center justify-center transition-opacity text-white text-[11px] font-bold gap-1">
                             <Eye size={15} />
-                            <span>Inspect Post Media</span>
+                            <span>{isHindi ? 'पोस्ट मीडिया देखें' : 'Inspect Post Media'}</span>
                           </div>
                           <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-semibold">
-                            Social Media Upload
+                            {isHindi ? 'सोशल मीडिया अपलोड' : 'Social Media Upload'}
                           </span>
                         </div>
                       )}
@@ -419,13 +413,13 @@ export default function DuplicateReview() {
 
                     <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-500 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Account Handle:</span>
+                        <span className="text-slate-400">{isHindi ? 'अकाउंट हैंडल:' : 'Account Handle:'}</span>
                         <span className="font-bold text-sky-600">{social?.source_handle || '@MumbaiRains'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">P(Misleading):</span>
+                        <span className="text-slate-400">{isHindi ? 'भ्रामक संभावना:' : 'P(Misleading):'}</span>
                         <span className="font-mono font-bold text-slate-700">
-                          {((social?.p_misleading || 0.08) * 100).toFixed(0)}% (Low Risk)
+                          {((social?.p_misleading || 0.08) * 100).toFixed(0)}% {isHindi ? '(कम जोखिम)' : '(Low Risk)'}
                         </span>
                       </div>
                     </div>
@@ -437,7 +431,7 @@ export default function DuplicateReview() {
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                         <div className="flex items-center gap-2 text-emerald-700 font-bold text-[12px]">
                           <FileText size={16} />
-                          <span>3. Structured News RSS / Agency</span>
+                          <span>3. {isHindi ? 'संरचित समाचार आरएसएस / एजेंसी' : 'Structured News RSS / Agency'}</span>
                         </div>
                         <span className="font-mono text-[10px] text-slate-400 font-bold">
                           {news?.id || 'RPT-003'}
@@ -448,7 +442,7 @@ export default function DuplicateReview() {
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70 space-y-2 min-h-[144px] flex flex-col justify-center">
                         <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-800">
                           <CheckCircle2 size={13} className="text-emerald-600" />
-                          <span>Official Broadcast Release</span>
+                          <span>{isHindi ? 'आधिकारिक प्रसारण विज्ञप्ति' : 'Official Broadcast Release'}</span>
                         </div>
                         <p className="text-[12px] text-slate-800 leading-relaxed font-medium">
                           "{news?.raw_text || 'IMD issues red alert for Mumbai as heavy rainfall continues. BMC deploys NDRF teams in low-lying areas of Dadar and Sion.'}"
@@ -458,12 +452,12 @@ export default function DuplicateReview() {
 
                     <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-500 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Publisher:</span>
+                        <span className="text-slate-400">{isHindi ? 'प्रकाशक:' : 'Publisher:'}</span>
                         <span className="font-bold text-slate-700">{news?.source_handle || 'NDTV Mumbai Bureau'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Agency Authority:</span>
-                        <span className="font-bold text-emerald-600">99% Validated</span>
+                        <span className="text-slate-400">{isHindi ? 'एजेंसी प्रामाणिकता:' : 'Agency Authority:'}</span>
+                        <span className="font-bold text-emerald-600">{isHindi ? '99% प्रमाणित' : '99% Validated'}</span>
                       </div>
                     </div>
                   </div>
@@ -473,7 +467,11 @@ export default function DuplicateReview() {
                 <div className="px-5 py-4 bg-slate-50/80 border-t border-slate-100/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-[12px] text-slate-500">
                     <Layers size={14} className="text-purple-600" />
-                    <span>Collapsing signals merges text vectors into a single canonical event while indexing each source ID.</span>
+                    <span>
+                      {isHindi
+                        ? 'सिग्नलों को मिलाने से प्रत्येक स्रोत आईडी को अनुक्रमित करते हुए एक मानक घटना में विलय हो जाता है।'
+                        : 'Collapsing signals merges text vectors into a single canonical event while indexing each source ID.'}
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2.5 self-end sm:self-center">
@@ -483,7 +481,7 @@ export default function DuplicateReview() {
                         className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-[12px] font-bold shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
                       >
                         <Undo2 size={15} />
-                        <span>Undo Fusion</span>
+                        <span>{isHindi ? 'फ़्यूज़न पूर्ववत करें' : 'Undo Fusion'}</span>
                       </button>
                     ) : (
                       <>
@@ -492,7 +490,7 @@ export default function DuplicateReview() {
                           className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
                         >
                           <Split size={14} />
-                          <span>Keep Separate</span>
+                          <span>{isHindi ? 'अलग रखें' : 'Keep Separate'}</span>
                         </button>
 
                         <button
@@ -500,7 +498,7 @@ export default function DuplicateReview() {
                           className="px-4.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-[12px] font-extrabold shadow-md transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                         >
                           <GitMerge size={16} />
-                          <span>Confirm & Merge Cluster</span>
+                          <span>{isHindi ? 'क्लस्टर की पुष्टि और विलय करें' : 'Confirm & Merge Cluster'}</span>
                         </button>
                       </>
                     )}
@@ -526,8 +524,8 @@ export default function DuplicateReview() {
             >
               <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/90">
                 <span className="text-[13px] font-bold text-white flex items-center gap-2">
-                  <Sparkles size={15} className="text-purple-400" />
-                  Cluster Observation Media Lightbox
+                  <Eye size={15} className="text-purple-400" />
+                  {isHindi ? 'क्लस्टर अवलोकन मीडिया लाइटबॉक्स' : 'Cluster Observation Media Lightbox'}
                 </span>
                 <button
                   onClick={() => setPreviewMedia(null)}
@@ -546,7 +544,9 @@ export default function DuplicateReview() {
               </div>
 
               <div className="p-4 bg-slate-900 text-center text-slate-400 text-[12px] border-t border-slate-800">
-                Corroborated incident photo evidence fused in spatiotemporal cluster.
+                {isHindi
+                  ? 'स्थानिक-कालिक क्लस्टर में पुष्टीकृत घटना फोटो साक्ष्य।'
+                  : 'Corroborated incident photo evidence fused in spatiotemporal cluster.'}
               </div>
             </div>
           </div>,

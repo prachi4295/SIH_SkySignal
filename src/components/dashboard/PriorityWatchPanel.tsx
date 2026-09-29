@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Priority Watch Panel
+   SkySignal — Priority Watch Panel
    Right-side drawer showing high-priority events
    ═══════════════════════════════════════════════════════ */
 

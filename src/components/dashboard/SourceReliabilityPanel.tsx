@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Source Reliability Meters
+   SkySignal — Source Reliability Meters
    Progress bar meters showing data source trust scores
    ═══════════════════════════════════════════════════════ */
 

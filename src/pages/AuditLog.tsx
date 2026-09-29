@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Administrative Audit Log
+   SkySignal — Administrative Audit Log
    Immutable forensic record for IMD meteorological triage
    Searchable table logging administrative actions:
    Analyst Email, Action (verify_report, reject_report, merge_cluster),
@@ -7,6 +7,7 @@
    ═══════════════════════════════════════════════════════ */
 
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ShieldCheck,
   Search,
@@ -36,12 +37,14 @@ export interface AuditRecord {
   id: string;
   analystEmail: string;
   analystRole: string;
+  analystRoleHi?: string;
   action: AuditActionType;
   targetType: TargetType;
   targetId: string;
   utcTimestamp: string;
   istTimestamp: string;
   rationale: string;
+  rationaleHi?: string;
   cryptoHash: string;
 }
 
@@ -146,34 +149,39 @@ const INITIAL_AUDIT_DATA: AuditRecord[] = [
 
 const ACTION_CONFIG: Record<
   AuditActionType,
-  { label: string; icon: any; color: string; bg: string }
+  { label: string; labelHi: string; icon: any; color: string; bg: string }
 > = {
   verify_report: {
     label: 'verify_report',
+    labelHi: 'रिपोर्ट सत्यापित',
     icon: CheckCircle2,
     color: 'text-emerald-700',
     bg: 'bg-emerald-50 border-emerald-200',
   },
   reject_report: {
     label: 'reject_report',
+    labelHi: 'रिपोर्ट अस्वीकृत',
     icon: XCircle,
     color: 'text-rose-700',
     bg: 'bg-rose-50 border-rose-200',
   },
   merge_cluster: {
     label: 'merge_cluster',
+    labelHi: 'क्लस्टर विलय',
     icon: GitMerge,
     color: 'text-purple-700',
     bg: 'bg-purple-50 border-purple-200',
   },
   escalate_alert: {
     label: 'escalate_alert',
+    labelHi: 'अलर्ट बढ़ाया गया',
     icon: AlertTriangle,
     color: 'text-amber-700',
     bg: 'bg-amber-50 border-amber-200',
   },
   broadcast_advisory: {
     label: 'broadcast_advisory',
+    labelHi: 'परामर्श प्रसारित',
     icon: Radio,
     color: 'text-sky-700',
     bg: 'bg-sky-50 border-sky-200',
@@ -181,6 +189,9 @@ const ACTION_CONFIG: Record<
 };
 
 export default function AuditLog() {
+  const { i18n } = useTranslation();
+  const isHindi = i18n.language === 'hi';
+
   const [logs] = useState<AuditRecord[]>(INITIAL_AUDIT_DATA);
   const [search, setSearch] = useState('');
   const [selectedAction, setSelectedAction] = useState<AuditActionType | 'all'>('all');
@@ -230,19 +241,16 @@ export default function AuditLog() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Lock size={22} className="text-sky-600" />
-            <h1 className="text-[22px] font-black text-slate-900 tracking-tight font-['Outfit']">
-              Administrative Audit Log & Decision Ledger
+            <h1 className="text-[22px] font-black text-slate-900 tracking-tight">
+              {isHindi ? 'प्रशासनिक ऑडिट लॉग और निर्णय लेज़र' : 'Administrative Audit Log & Decision Ledger'}
             </h1>
           </div>
-          <p className="text-[13px] text-slate-500">
-            Immutable forensic accountability record capturing all analyst triage actions, cluster fusions, and emergency escalations.
-          </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[12px] font-bold flex items-center gap-1.5 shadow-2xs">
             <ShieldCheck size={14} className="text-emerald-600" />
-            <span>SHA-256 Ledger Sealed</span>
+            <span>{isHindi ? 'SHA-256 लेज़र सुरक्षित' : 'SHA-256 Ledger Sealed'}</span>
           </div>
 
           <button
@@ -251,7 +259,7 @@ export default function AuditLog() {
             title="Download CSV audit log"
           >
             <Download size={14} />
-            <span className="hidden sm:inline">Export CSV</span>
+            <span className="hidden sm:inline">{isHindi ? 'सीएसवी निर्यात' : 'Export CSV'}</span>
           </button>
         </div>
       </div>
@@ -266,7 +274,7 @@ export default function AuditLog() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by analyst email, action, target ID (e.g. RPT-001), or rationale..."
+              placeholder={isHindi ? 'विश्लेषक ईमेल, कार्रवाई, लक्ष्य आईडी (उदा. RPT-001) या विवरण द्वारा खोजें...' : 'Search by analyst email, action, target ID (e.g. RPT-001), or rationale...'}
               className="w-full pl-9 pr-3.5 py-2 text-[12px] bg-slate-50 border border-slate-200/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium text-slate-800"
             />
           </div>
@@ -275,7 +283,7 @@ export default function AuditLog() {
           <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold">
             <span className="text-slate-400 uppercase tracking-wider text-[10px] flex items-center gap-1">
               <Filter size={12} />
-              Action:
+              {isHindi ? 'कार्रवाई:' : 'Action:'}
             </span>
             <button
               onClick={() => setSelectedAction('all')}
@@ -285,7 +293,7 @@ export default function AuditLog() {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              All Actions
+              {isHindi ? 'सभी कार्रवाइयां' : 'All Actions'}
             </button>
             {(['verify_report', 'reject_report', 'merge_cluster', 'escalate_alert', 'broadcast_advisory'] as AuditActionType[]).map((act) => {
               const cfg = ACTION_CONFIG[act];
@@ -299,7 +307,7 @@ export default function AuditLog() {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {cfg.label}
+                  {isHindi ? cfg.labelHi : cfg.label}
                 </button>
               );
             })}
@@ -308,10 +316,12 @@ export default function AuditLog() {
 
         <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100 font-medium">
           <span>
-            Displaying <strong className="text-slate-800">{filteredLogs.length}</strong> authenticated audit records
+            {isHindi
+              ? `${filteredLogs.length} प्रमाणित ऑडिट रिकॉर्ड प्रदर्शित`
+              : `Displaying ${filteredLogs.length} authenticated audit records`}
           </span>
           <span className="font-mono text-[10px]">
-            Compliant with IMD Digital Forensic Standard DFS-2026
+            {isHindi ? 'आईएमडी डिजिटल फॉरेंसिक मानक DFS-2026 के अनुरूप' : 'Compliant with IMD Digital Forensic Standard DFS-2026'}
           </span>
         </div>
       </div>
@@ -322,20 +332,20 @@ export default function AuditLog() {
           <table className="w-full text-left text-[12px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-100/70 text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4">Audit ID</th>
-                <th className="py-3 px-4">Analyst Email & Role</th>
-                <th className="py-3 px-3">Action</th>
-                <th className="py-3 px-3">Target Type & ID</th>
-                <th className="py-3 px-4">Timestamp (UTC + IST)</th>
-                <th className="py-3 px-5">Operational Rationale & Provenance</th>
-                <th className="py-3 px-4 text-right">Hash</th>
+                <th className="py-3 px-4">{isHindi ? 'ऑडिट आईडी' : 'Audit ID'}</th>
+                <th className="py-3 px-4">{isHindi ? 'विश्लेषक एवं भूमिका' : 'Analyst Email & Role'}</th>
+                <th className="py-3 px-3">{isHindi ? 'कार्रवाई' : 'Action'}</th>
+                <th className="py-3 px-3">{isHindi ? 'लक्ष्य प्रकार एवं आईडी' : 'Target Type & ID'}</th>
+                <th className="py-3 px-4">{isHindi ? 'समय (UTC + IST)' : 'Timestamp (UTC + IST)'}</th>
+                <th className="py-3 px-5">{isHindi ? 'परिचालन कारण एवं उत्पत्ति' : 'Operational Rationale & Provenance'}</th>
+                <th className="py-3 px-4 text-right">{isHindi ? 'हैश' : 'Hash'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-14 text-center text-slate-400">
-                    No audit records match the active search or action filter.
+                    {isHindi ? 'कोई ऑडिट रिकॉर्ड फ़िल्टर से मेल नहीं खाता।' : 'No audit records match the active search or action filter.'}
                   </td>
                 </tr>
               ) : (
@@ -358,7 +368,7 @@ export default function AuditLog() {
                             <span>{log.analystEmail}</span>
                           </div>
                           <span className="text-[10px] text-slate-400 block pl-5">
-                            {log.analystRole}
+                            {isHindi && log.analystRoleHi ? log.analystRoleHi : log.analystRole}
                           </span>
                         </div>
                       </td>
@@ -369,7 +379,7 @@ export default function AuditLog() {
                           className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold flex items-center gap-1.5 border w-fit ${actionMeta.bg} ${actionMeta.color}`}
                         >
                           <ActionIcon size={13} />
-                          <span>{actionMeta.label}</span>
+                          <span>{isHindi ? actionMeta.labelHi : actionMeta.label}</span>
                         </span>
                       </td>
 
@@ -403,7 +413,7 @@ export default function AuditLog() {
                       {/* Rationale Statement */}
                       <td className="py-3.5 px-5 max-w-md">
                         <p className="text-[11px] text-slate-700 leading-relaxed font-medium">
-                          {log.rationale}
+                          {isHindi && log.rationaleHi ? log.rationaleHi : log.rationale}
                         </p>
                       </td>
 
@@ -428,3 +438,4 @@ export default function AuditLog() {
     </div>
   );
 }
+

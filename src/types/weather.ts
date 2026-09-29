@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Domain Model Types
+   SkySignal — Domain Model Types
    Strict taxonomy for weather intelligence platform
    Aligned with backend FastAPI schema (SIH26069)
    ═══════════════════════════════════════════════════════ */
@@ -79,6 +79,24 @@ export interface WeatherEvent {
   detected_at: string;               // ISO 8601
   last_updated_at: string;           // ISO 8601
   evidence_summary: EvidenceSummary;
+  media_urls?: string[];             // Ground truth observation photos/evidence
+  description?: string;              // Synthesized NLP brief combining IMD, citizen reports, and social feeds
+  comments?: EventComment[];
+}
+
+/** Citizen community comment & live ground update on an event */
+export interface EventComment {
+  id: string;
+  eventId: string;
+  userName: string;
+  userRole?: string;
+  tag?: string;
+  text: string;
+  upvotes: number;
+  hasUpvoted?: boolean;
+  timestamp: string;
+  created_at?: string; // ISO 8601 for long-term database archiving
+  isVerified?: boolean;
 }
 
 /** Breakdown of evidence sources backing an event */

@@ -1,11 +1,12 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Admin Login Modal
+   SkySignal — Admin Login Modal
    Glassmorphic authentication modal with 1-click demo autofill
    Persists JWT to localStorage & syncs with AuthContext
    ═══════════════════════════════════════════════════════ */
 
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import {
   Lock,
   Mail,
@@ -13,7 +14,6 @@ import {
   ShieldCheck,
   X,
   CheckCircle2,
-  Sparkles,
   Eye,
   EyeOff,
   LogOut,
@@ -26,23 +26,20 @@ interface AdminLoginModalProps {
 
 export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   const { isAdmin, user, login, logout, isLoginModalOpen, closeLoginModal } = useAuth();
+  const { i18n } = useTranslation();
+  const isHindi = i18n.language === 'hi';
 
   // Use props if provided, otherwise fallback to AuthContext state
   const showModal = isOpen !== undefined ? isOpen : isLoginModalOpen;
   const handleClose = onClose || closeLoginModal;
 
-  const [email, setEmail] = useState('analyst@imd.gov.in');
-  const [password, setPassword] = useState('Analyst@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmationToast, setConfirmationToast] = useState<string | null>(null);
 
   if (!showModal) return null;
-
-  const handleAutofillDemo = () => {
-    setEmail('analyst@imd.gov.in');
-    setPassword('Analyst@123');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +48,11 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
     setIsSubmitting(true);
     try {
       await login(email, password);
-      setConfirmationToast('Analyst authenticated! Session token stored. Command Center active.');
+      setConfirmationToast(
+        isHindi
+          ? 'विश्लेषक प्रमाणित! सत्र टोकन सुरक्षित। कमान केंद्र सक्रिय।'
+          : 'Analyst authenticated! Session token stored. Command Center active.'
+      );
       setTimeout(() => {
         setConfirmationToast(null);
         handleClose();
@@ -65,7 +66,11 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
 
   const handleLogout = () => {
     logout();
-    setConfirmationToast('Session terminated. Switched to public observer mode.');
+    setConfirmationToast(
+      isHindi
+        ? 'सत्र समाप्त। सार्वजनिक पर्यवेक्षक मोड पर वापस।'
+        : 'Session terminated. Switched to public observer mode.'
+    );
     setTimeout(() => {
       setConfirmationToast(null);
       handleClose();
@@ -105,10 +110,10 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
           </div>
           <div>
             <h3 className="text-[18px] font-extrabold text-slate-900 tracking-tight">
-              IMD Analyst Command Auth
+              {isHindi ? 'आईएमडी विश्लेषक कमान प्रमाणीकरण' : 'IMD Analyst Command Auth'}
             </h3>
             <p className="text-[12px] text-slate-500 font-medium">
-              National Weather Intelligence Platform (SIH26069)
+              {isHindi ? 'राष्ट्रीय मौसम आसूचना मंच (SIH26069)' : 'National Weather Intelligence Platform (SIH26069)'}
             </p>
           </div>
         </div>
@@ -127,10 +132,10 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
             <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-200/70 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-sky-700 uppercase tracking-wider">
-                  Active Session
+                  {isHindi ? 'सक्रिय सत्र' : 'Active Session'}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">
-                  AUTHENTICATED
+                  {isHindi ? 'प्रमाणित' : 'AUTHENTICATED'}
                 </span>
               </div>
               <div className="text-[15px] font-bold text-slate-900">{user.name}</div>
@@ -145,36 +150,16 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
               className="w-full py-2.5 px-4 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-[13px] font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogOut size={16} />
-              <span>Terminate Session (Logout)</span>
+              <span>{isHindi ? 'सत्र समाप्त करें (लॉगआउट)' : 'Terminate Session (Logout)'}</span>
             </button>
           </div>
         ) : (
           <>
-            {/* 1-Click Autofill Button */}
-            <div className="p-3 rounded-2xl bg-sky-50/60 border border-sky-200/60 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[12px] font-bold text-slate-800 flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-sky-600" />
-                  <span>Evaluation Demo Credentials</span>
-                </div>
-                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                  analyst@imd.gov.in / Analyst@123
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleAutofillDemo}
-                className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
-              >
-                Autofill Demo Analyst
-              </button>
-            </div>
-
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1.5">
-                  Official IMD Email
+                  {isHindi ? 'आधिकारिक आईएमडी ईमेल' : 'Official IMD Email'}
                 </label>
                 <div className="relative">
                   <Mail
@@ -194,7 +179,7 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
 
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1.5">
-                  Analyst Password
+                  {isHindi ? 'विश्लेषक पासवर्ड' : 'Analyst Password'}
                 </label>
                 <div className="relative">
                   <Key
@@ -227,11 +212,11 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
                 className="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {isSubmitting ? (
-                  <span>Signing In...</span>
+                  <span>{isHindi ? 'प्रमाणित किया जा रहा है...' : 'Signing In...'}</span>
                 ) : (
                   <>
                     <ShieldCheck size={16} />
-                    <span>Authorize Analyst Access</span>
+                    <span>{isHindi ? 'विश्लेषक पहुंच अधिकृत करें' : 'Authorize Analyst Access'}</span>
                   </>
                 )}
               </button>
@@ -239,7 +224,9 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
 
             {/* Regulatory Footer Notice */}
             <div className="text-center text-[10px] text-slate-400 leading-relaxed border-t border-slate-100 pt-3">
-              Protected meteorological command center. All authorization events are cryptographically recorded in the audit log.
+              {isHindi
+                ? 'संरक्षित मौसम विज्ञान कमान केंद्र। सभी प्राधिकरण घटनाएं ऑडिट लॉग में क्रिप्टोग्राफिक रूप से दर्ज की जाती हैं।'
+                : 'Protected meteorological command center. All authorization events are cryptographically recorded in the audit log.'}
             </div>
           </>
         )}

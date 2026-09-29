@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Analytics Dashboard
+   SkySignal — Analytics Dashboard
    Macro-level meteorological intelligence built with Recharts
    Chart 1: 24-Hour Temporal Ingestion Volume (monotone area chart)
    Chart 2: Hazard Distribution (horizontal proportional progress bars)
@@ -8,6 +8,7 @@
    ═══════════════════════════════════════════════════════ */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart3,
   TrendingUp,
@@ -29,6 +30,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { translateCategory } from '../lib/hindiTranslations';
 
 // ── 1. 24-Hour Temporal Ingestion Volume Data ──
 const HOURLY_INGESTION_DATA = [
@@ -126,6 +128,8 @@ const HEATMAP_DATA: HeatmapRow[] = [
 ];
 
 export default function Analytics() {
+  const { i18n } = useTranslation();
+  const isHindi = i18n.language === 'hi';
   const [timeFilter, setTimeFilter] = useState<'24h' | '7d' | '30d'>('24h');
 
   // Custom Recharts Tooltip
@@ -134,7 +138,7 @@ export default function Analytics() {
       return (
         <div className="p-3 bg-slate-900/95 backdrop-blur-md text-white rounded-xl border border-slate-700 shadow-xl text-[12px] space-y-1">
           <div className="font-mono text-slate-400 font-bold border-b border-slate-800 pb-1">
-            Time: {label} IST
+            {isHindi ? 'समय: ' : 'Time: '}{label} IST
           </div>
           {payload.map((item: any, index: number) => (
             <div key={index} className="flex items-center justify-between gap-4">
@@ -142,7 +146,7 @@ export default function Analytics() {
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
                 <span>{item.name}:</span>
               </span>
-              <span className="font-mono font-black">{item.value} signals</span>
+              <span className="font-mono font-black">{item.value} {isHindi ? 'सिग्नल' : 'signals'}</span>
             </div>
           ))}
         </div>
@@ -158,12 +162,14 @@ export default function Analytics() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <BarChart3 size={22} className="text-sky-600" />
-            <h1 className="text-[22px] font-black text-slate-900 tracking-tight font-['Outfit']">
-              Meteorological Macro Intelligence & Telemetry Analytics
+            <h1 className="text-[22px] font-black text-slate-900 tracking-tight">
+              {isHindi ? 'मौसम विज्ञान मैक्रो इंटेलिजेंस और टेलीमेट्री एनालिटिक्स' : 'Meteorological Macro Intelligence & Telemetry Analytics'}
             </h1>
           </div>
           <p className="text-[13px] text-slate-500">
-            Ingestion curves, 7-hazard taxonomy distribution, multi-source veracity metrics, and spatial vulnerability heatmap.
+            {isHindi
+              ? 'डेटा इनजेशन वक्र, 7-खतरा वर्गीकरण वितरण, बहु-स्रोत सत्यता मेट्रिक्स और स्थानिक संवेदनशीलता हीटमैप।'
+              : 'Ingestion curves, 7-hazard taxonomy distribution, multi-source veracity metrics, and spatial vulnerability heatmap.'}
           </p>
         </div>
 
@@ -179,60 +185,52 @@ export default function Analytics() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {t === '24h' ? 'Last 24 Hours' : t === '7d' ? 'Last 7 Days' : 'Last 30 Days'}
+              {t === '24h'
+                ? (isHindi ? 'पिछले 24 घंटे' : 'Last 24 Hours')
+                : t === '7d'
+                ? (isHindi ? 'पिछले 7 दिन' : 'Last 7 Days')
+                : (isHindi ? 'पिछले 30 दिन' : 'Last 30 Days')}
             </button>
           ))}
         </div>
       </div>
 
       {/* ── Top Metric Highlights ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
         <div className="glass-card p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-            Total Multi-Source Ingestion
+            {isHindi ? 'कुल बहु-स्रोत इनजेशन' : 'Total Multi-Source Ingestion'}
           </span>
-          <div className="text-[26px] font-black text-slate-900 font-['Outfit'] mt-1">
+          <div className="text-[26px] font-black text-slate-900 mt-1">
             21,760
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold mt-1">
             <TrendingUp size={13} />
-            <span>+14.2% vs previous period</span>
+            <span>{isHindi ? '+14.2% पिछली अवधि की तुलना में' : '+14.2% vs previous period'}</span>
           </div>
         </div>
 
         <div className="glass-card p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-            AI Automated Corroboration
+            {isHindi ? 'एआई स्वचालित संपुष्टि' : 'AI Automated Corroboration'}
           </span>
-          <div className="text-[26px] font-black text-sky-600 font-['Outfit'] mt-1">
+          <div className="text-[26px] font-black text-sky-600 mt-1">
             91.4%
           </div>
           <span className="text-[11px] text-slate-400 font-medium">
-            Cosine similarity &gt; 0.85
+            {isHindi ? 'कोसाइन समानता > 0.85' : 'Cosine similarity > 0.85'}
           </span>
         </div>
 
         <div className="glass-card p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-            Severe Hazard Warnings
+            {isHindi ? 'गंभीर मौसम चेतावनियाँ' : 'Severe Hazard Warnings'}
           </span>
-          <div className="text-[26px] font-black text-rose-600 font-['Outfit'] mt-1">
-            39 Incidents
+          <div className="text-[26px] font-black text-rose-600 mt-1">
+            39 {isHindi ? 'घटनाएँ' : 'Incidents'}
           </div>
           <span className="text-[11px] text-rose-500 font-bold">
-            Red alerts dispatched to NDMA
-          </span>
-        </div>
-
-        <div className="glass-card p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-            Mean Pipeline Latency
-          </span>
-          <div className="text-[26px] font-black text-purple-600 font-['Outfit'] mt-1">
-            1.24s
-          </div>
-          <span className="text-[11px] text-slate-400 font-medium">
-            Edge Kafka to Analyst Terminal
+            {isHindi ? 'एनडीएमए को रेड अलर्ट भेजे गए' : 'Red alerts dispatched to NDMA'}
           </span>
         </div>
       </div>
@@ -245,23 +243,23 @@ export default function Analytics() {
             <div>
               <div className="flex items-center gap-2">
                 <Activity size={17} className="text-sky-600" />
-                <h3 className="text-[15px] font-black text-slate-900 font-['Outfit']">
-                  24-Hour Temporal Ingestion Volume
+                <h3 className="text-[15px] font-black text-slate-900">
+                  {isHindi ? '24-घंटे का डेटा इनजेशन आयतन' : '24-Hour Temporal Ingestion Volume'}
                 </h3>
               </div>
               <p className="text-[11px] text-slate-500">
-                Monotone gradient comparison: Verified Reports vs. Unverified Raw Signals
+                {isHindi ? 'सत्यापित रिपोर्ट बनाम असत्यापित रॉ सिग्नल की तुलना' : 'Monotone gradient comparison: Verified Reports vs. Unverified Raw Signals'}
               </p>
             </div>
 
             <div className="flex items-center gap-4 text-[11px] font-bold">
               <span className="flex items-center gap-1.5 text-emerald-600">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span>Verified Reports</span>
+                <span>{isHindi ? 'सत्यापित रिपोर्ट' : 'Verified Reports'}</span>
               </span>
               <span className="flex items-center gap-1.5 text-purple-600">
                 <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-                <span>Unverified Signals</span>
+                <span>{isHindi ? 'असत्यापित सिग्नल' : 'Unverified Signals'}</span>
               </span>
             </div>
           </div>
@@ -302,7 +300,7 @@ export default function Analytics() {
                 <Area
                   type="monotone"
                   dataKey="unverified"
-                  name="Unverified Signals"
+                  name={isHindi ? 'असत्यापित सिग्नल' : 'Unverified Signals'}
                   stroke="#8b5cf6"
                   strokeWidth={2.5}
                   fillOpacity={1}
@@ -313,7 +311,7 @@ export default function Analytics() {
                 <Area
                   type="monotone"
                   dataKey="verified"
-                  name="Verified Reports"
+                  name={isHindi ? 'सत्यापित रिपोर्ट' : 'Verified Reports'}
                   stroke="#10b981"
                   strokeWidth={2.5}
                   fillOpacity={1}
@@ -330,11 +328,11 @@ export default function Analytics() {
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <Layers size={17} className="text-purple-600" />
               <div>
-                <h3 className="text-[15px] font-black text-slate-900 font-['Outfit']">
-                  Hazard Category Breakdown
+                <h3 className="text-[15px] font-black text-slate-900">
+                  {isHindi ? 'मौसम खतरा श्रेणी विवरण' : 'Hazard Category Breakdown'}
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Proportional representation across 7 official categories
+                  {isHindi ? '7 आधिकारिक श्रेणियों में आनुपातिक प्रतिनिधित्व' : 'Proportional representation across 7 official categories'}
                 </p>
               </div>
             </div>
@@ -346,7 +344,7 @@ export default function Analytics() {
                   <div className="flex items-center justify-between text-[11px] font-bold">
                     <span className="flex items-center gap-1.5 text-slate-700">
                       <span>{item.icon}</span>
-                      <span>{item.category}</span>
+                      <span>{translateCategory(item.category, isHindi)}</span>
                     </span>
                     <span className="font-mono text-slate-500">
                       <strong className="text-slate-900">{item.pct}%</strong> ({item.count})
@@ -366,8 +364,8 @@ export default function Analytics() {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Primary Active Hazard:</span>
-            <span className="font-bold text-sky-700">🌧️ Rainfall (36% National Share)</span>
+            <span>{isHindi ? 'प्राथमिक सक्रिय खतरा:' : 'Primary Active Hazard:'}</span>
+            <span className="font-bold text-sky-700">{isHindi ? '🌧️ भारी वर्षा (36% राष्ट्रीय हिस्सा)' : '🌧️ Rainfall (36% National Share)'}</span>
           </div>
         </div>
 
@@ -377,11 +375,11 @@ export default function Analytics() {
             <div className="flex items-center gap-2">
               <ShieldCheck size={17} className="text-emerald-600" />
               <div>
-                <h3 className="text-[15px] font-black text-slate-900 font-['Outfit']">
-                  Source Reliability Index
+                <h3 className="text-[15px] font-black text-slate-900">
+                  {isHindi ? 'डेटा स्रोत विश्वसनीयता सूचकांक' : 'Source Reliability Index'}
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Bayesian veracity scoring calibrated against Doppler ground truth
+                  {isHindi ? 'डॉपलर रडार और सेंसर आधारित प्रामाणिकता स्कोर' : 'Bayesian veracity scoring calibrated against Doppler ground truth'}
                 </p>
               </div>
             </div>
@@ -402,13 +400,21 @@ export default function Analytics() {
                       </div>
                       <div>
                         <h4 className="text-[12px] font-black text-slate-900 leading-tight">
-                          {src.source}
+                          {isHindi && src.source === 'IMD Sensor Network' ? 'आईएमडी सेंसर नेटवर्क' :
+                           isHindi && src.source === 'Citizen Telemetry App' ? 'नागरिक अवलोकन ऐप' :
+                           isHindi && src.source === 'Regional News RSS' ? 'क्षेत्रीय समाचार फ़ीड' :
+                           isHindi && src.source === 'Social Media (Twitter/X)' ? 'सोशल मीडिया (एक्स/ट्विटर)' : src.source}
                         </h4>
-                        <span className="text-[10px] text-slate-400 block">{src.type}</span>
+                        <span className="text-[10px] text-slate-400 block">
+                          {isHindi && src.type.includes('Doppler') ? 'डॉपलर रडार और मौसम गेज' :
+                           isHindi && src.type.includes('Geotagged') ? 'जियोटैग की गई नागरिक रिपोर्ट' :
+                           isHindi && src.type.includes('Accredited') ? 'प्रमाणित मीडिया बुलेटिन' :
+                           isHindi ? 'एनएलपी स्थानिक विश्लेषण' : src.type}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="text-[18px] font-black font-mono text-slate-900 font-['Outfit']">
+                    <div className="text-[18px] font-black font-mono text-slate-900">
                       {src.reliability}%
                     </div>
                   </div>
@@ -439,26 +445,26 @@ export default function Analytics() {
             <div className="flex items-center gap-2">
               <AlertTriangle size={17} className="text-rose-600" />
               <div>
-                <h3 className="text-[15px] font-black text-slate-900 font-['Outfit']">
-                  Regional Incident Heatmap Matrix
+                <h3 className="text-[15px] font-black text-slate-900">
+                  {isHindi ? 'क्षेत्रीय घटना हीटमैप मैट्रिक्स' : 'Regional Incident Heatmap Matrix'}
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  State-by-state active cluster density indexed by 3-tier severity
+                  {isHindi ? 'गंभीरता के अनुसार राज्यवार सक्रिय घटना घनत्व' : 'State-by-state active cluster density indexed by 3-tier severity'}
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-mono text-slate-400">10 High-Activity States</span>
+            <span className="text-[10px] font-mono text-slate-400">{isHindi ? '10 उच्च-सक्रियता राज्य' : '10 High-Activity States'}</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[11px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-100/60 text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-3">State / Jurisdiction</th>
-                  <th className="py-2.5 px-2 text-center">Minor (1-tier)</th>
-                  <th className="py-2.5 px-2 text-center">Moderate (2-tier)</th>
-                  <th className="py-2.5 px-2 text-center">Severe (3-tier)</th>
-                  <th className="py-2.5 px-3 text-right">Total Density</th>
+                  <th className="py-2.5 px-3">{isHindi ? 'राज्य / अधिकार क्षेत्र' : 'State / Jurisdiction'}</th>
+                  <th className="py-2.5 px-2 text-center">{isHindi ? 'मामूली (स्तर-1)' : 'Minor (1-tier)'}</th>
+                  <th className="py-2.5 px-2 text-center">{isHindi ? 'मध्यम (स्तर-2)' : 'Moderate (2-tier)'}</th>
+                  <th className="py-2.5 px-2 text-center">{isHindi ? 'गंभीर (स्तर-3)' : 'Severe (3-tier)'}</th>
+                  <th className="py-2.5 px-3 text-right">{isHindi ? 'कुल घनत्व' : 'Total Density'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

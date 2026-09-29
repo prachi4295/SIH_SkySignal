@@ -1,7 +1,8 @@
-# ⛈️ SkySignal 2.0 — National Weather Intelligence Platform
+# ⛈️ SkySignal — National Weather Intelligence Platform
 
-> **SIH26069** · Ministry of Earth Sciences (MoES) / India Meteorological Department (IMD)  
-> Real-Time Multi-Source Meteorological Telemetry Aggregation, Deduplication, and Spatio-Temporal Event Fusion Engine.
+> **Team Skyscrapers** · **SIH26069: National Weather Big Data Analytics Platform**  
+> **Ministry of Earth Sciences (MoES) / India Meteorological Department (IMD)**  
+> *Real-Time Multi-Source Meteorological Telemetry Aggregation, Deduplication, and Spatio-Temporal Event Fusion Engine.*
 
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.115-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/Frontend-React_19_Vite-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
@@ -15,9 +16,11 @@
 
 ## 📌 Executive Summary
 
-**SkySignal 2.0** is an enterprise-grade, distributed meteorological intelligence platform designed to ingest raw citizen weather observations, social media signals, and sensor feeds, corroborate them against official IMD data, deduplicate near-identical submissions across space and time, estimate credibility, and fuse them into actionable national weather events in real-time.
+**SkySignal** is an enterprise-grade, distributed meteorological intelligence platform designed to ingest raw citizen weather observations, social media signals, and automated sensor telemetry, corroborate them against official IMD radar and AWS data, deduplicate near-identical submissions across space and time, estimate credibility via AI trust scoring, and fuse them into actionable national weather events in real time.
 
-Built with strict data scoping and role-based access control (RBAC), the platform delivers a read-only situational awareness dashboard for citizens and a secure, real-time command portal for IMD analysts.
+Built with strict data scoping and role-based access control (RBAC), the platform provides:
+1. **A public situational awareness portal & offline PWA** for citizens and first responders.
+2. **A secure, real-time command portal** for IMD analysts and emergency dispatchers.
 
 ---
 
@@ -25,29 +28,29 @@ Built with strict data scoping and role-based access control (RBAC), the platfor
 
 ```mermaid
 flowchart TB
-    subgraph Ingestion ["1. Multi-Source Ingestion"]
+    subgraph Ingestion ["1. Multi-Source Ingestion Layer"]
         C1["Citizen PWA Portal<br>(GPS / Manual / Media)"] --> API
         C2["PWA Offline Sync<br>(IndexedDB Batch Sync)"] --> API
-        S1["Social Feeds / RSS"] -.-> K_raw
-        S2["Official IMD Radar / Telemetry"] -.-> K_raw
+        S1["Social Feeds / RSS"] -.-> K_raw["Kafka Ingest Broker"]
+        S2["Official IMD Radar / AWS Sensors"] -.-> K_raw
     end
 
-    subgraph Backend ["2. FastAPI Backend & Gateway"]
-        API["FastAPI Gateway (/v1)<br>RBAC + Data Scoping"]
+    subgraph Backend ["2. FastAPI Backend & Gateway (/v1)"]
+        API["FastAPI Gateway<br>RBAC + Data Scoping"]
         API --> MinIO[("MinIO S3 Media Storage")]
         API --> DB[("PostgreSQL 15 + PostGIS<br>Spatial Geography")]
     end
 
     subgraph KafkaPipeline ["3. Asynchronous Streaming Pipeline (aiokafka)"]
         API --> K1["normalized.reports"]
-        K1 --> W_DEDUP["Dedup Worker<br>(skysignal-dedup-group)"]
+        K1 --> W_DEDUP["Stage 1: Dedup Worker<br>(skysignal-dedup-group)"]
         W_DEDUP --> K2["processed.dedup"]
-        K2 --> W_CLASS["Classification Worker<br>(skysignal-classification-group)"]
+        K2 --> W_CLASS["Stage 2: Classification Worker<br>(skysignal-classification-group)"]
         W_CLASS --> K3["processed.classified"]
-        K3 --> W_TRUST["Trust Worker<br>(skysignal-trust-group)"]
+        K3 --> W_TRUST["Stage 3: Trust Worker<br>(P_misleading Engine)"]
         W_TRUST --> K4["processed.trusted"]
         W_TRUST -. DB Update .-> DB
-        K4 --> W_FUSION["Event Fusion Worker<br>(ST_DWithin 10km Radius)"]
+        K4 --> W_FUSION["Stage 4: Event Fusion Worker<br>(ST_DWithin 10km Radius)"]
         W_FUSION -. Recalculate & Link .-> DB
         W_FUSION --> K5["weather.events"]
     end
@@ -61,27 +64,30 @@ flowchart TB
 
 ---
 
-## ✨ Key Capabilities
+## ✨ Key Capabilities & Feature Modules
 
-### 1. Citizen Weather Reporting & Offline PWA
-- **Zero-Auth Ingestion (`POST /v1/reports`):** Citizens submit weather hazards (rainfall, flooding, thunderstorms, heatwaves, dust storms, fogs, strong winds) with optional photos/videos without needing an account.
-- **Anonymous Device Identification:** Session tracking enforced strictly via `X-Device-Id` header.
-- **PWA Offline Sync (`POST /v1/reports/batch-sync`):** Reports logged during network outages are cached in client IndexedDB and synced upon reconnection with strict `client_report_id` idempotency.
-- **Session History (`GET /v1/reports/mine`):** Device-scoped query displaying previous submissions without leaking personal data.
+### 🌐 1. Citizen & Public Portal (Zero-Auth Experience)
+- **Live Geospatial Radar Map:** Interactive Leaflet radar map with dark atmospheric styling, real-time hazard markers, active alert zones, and dynamic event telemetry slide-out panels.
+- **Zero-Auth Incident Reporting (`/report`):** Report extreme weather (Heavy Rain, Flooding, Thunderstorms, Fog, Heatwave, Strong Winds) in under 15 seconds with GPS auto-detection, interactive coordinate adjustment, severity ratings, and photo evidence upload.
+- **Offline-First PWA & Batch Sync:** Full offline resilience using client-side **IndexedDB**. When connectivity drops, reports are cached locally with deterministic UUID idempotency keys and automatically batch-synced upon reconnection (`POST /v1/reports/batch-sync`).
+- **Session History (`/report` $\to$ My Submissions):** Device-scoped query (`GET /v1/reports/mine`) displaying previous submissions without leaking personal identity or requiring registration.
+- **Crisis Aid & Relief Network (`/relief-network`):** Real-time directory and map of operational evacuation shelters, medical relief camps, clean water supply points, and food distribution centers with live capacity indicators.
+- **Emergency Directory & Helplines (`/emergency`):** Direct one-tap SOS calling for NDRF, State Disaster Management Authorities (SDMA), ambulance services, and regional flood control rooms.
+- **Bilingual Accessibility:** Instant toggle between **English** and **हिन्दी (Hindi)** powered by `i18next`.
 
-### 2. High-Performance 4-Stage Kafka Workers
-- **Stage 1 (Dedup):** Consumes `normalized.reports`, applies clustering heuristics, and dispatches to `processed.dedup`.
-- **Stage 2 (Classification):** Consumes `processed.dedup`, assigns category confidence scores (0.60–0.99), and dispatches to `processed.classified`.
-- **Stage 3 (Trust Scoring):** Consumes `processed.classified`, computes misleading risk $P_{\text{misleading}}$ (0.01–0.99), updates PostgreSQL records, and publishes to `processed.trusted`.
-- **Stage 4 (Event Fusion):** Consumes `processed.trusted`, runs PostGIS `ST_DWithin` (10km, 6h window), links corroborating reports into canonical `Event` clusters, recalculates multi-source confidence, and publishes to Redis `events_telemetry`.
+---
 
-### 3. Real-Time Telemetry (SSE Stream)
-- Protected `GET /v1/events/stream` subscription powered by async Redis Pub/Sub.
-- Push-based updates stream directly into the React Leaflet radar map and situational summary cards without client polling.
-
-### 4. Strict Security & Public Data Scoping
-- **Public Query Rewriting:** Unauthenticated requests to `GET /v1/events` automatically force `lifecycle_status IN ('confirmed', 'active')` at the database level, preventing disclosure of unverified or internal events.
-- **Granular RBAC:** `analyst` and `senior_admin` roles verified via signed HS256 JWT tokens. Sensitive endpoints (verification triage, duplicate review, merge/escalate actions, audit logs) strictly reject unauthorized access.
+### 🛡️ 2. IMD Analyst Command Portal (RBAC Protected)
+- **Granular Role-Based Access Control:** Secure authentication via signed HS256 JWT tokens. Sensitive endpoints (verification triage, duplicate review, merge/escalate actions, audit logs) reject unauthorized access.
+- **Verification Queue (`/verification`):** High-priority triage console featuring:
+  - **AI Trust Scoring & Credibility Estimation:** Calculates Misleading Risk Probability ($P_{\text{misleading}}$) and category confidence (0.60–0.99).
+  - **Media Evidence Inspector:** High-resolution photo/video review with EXIF timestamp and metadata checks.
+  - **Sensor Cross-Corroboration:** Cross-references citizen submissions with nearby official IMD radar returns and AWS weather sensors.
+  - **1-Click Actions:** Verify, Reject, Request Further Information, or Escalate to National Emergency tiers.
+- **Spatio-Temporal Duplicate Review (`/duplicates`):** PostGIS-driven clustering engine running spatial queries within a dynamic **10-kilometer radius and 6-hour sliding window**. Analysts can review cluster similarity matrices and merge redundant reports into a single canonical event.
+- **Data Sources & Pipeline Telemetry (`/sources`):** Real-time monitoring of the 4-stage Apache Kafka pipeline, buffer queues, MinIO S3 media storage volume, and Redis Pub/Sub SSE connection health.
+- **Incident Analytics & Retrospectives (`/analytics`):** Interactive Recharts visualizations of hazard distribution by state, hourly report velocity, verification latency, and incident resolution rates.
+- **Immutable Audit Log (`/audit`):** Cryptographically timestamped chronological ledger of all administrative decisions, including analyst attribution, action types (`VERIFY_REPORT`, `MERGE_EVENT`), and IP origins.
 
 ---
 
@@ -91,24 +97,36 @@ flowchart TB
 |---|---|
 | **Frontend SPA** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, Recharts |
 | **Geospatial Mapping** | Leaflet, React-Leaflet, Leaflet MarkerCluster, OpenStreetMap / CartoDB Dark |
-| **Backend API** | FastAPI, Uvicorn, Pydantic Settings, AsyncPG |
+| **Offline Storage & i18n** | IndexedDB (`idb`), `i18next`, `react-i18next`, PWA Service Worker |
+| **Backend API** | FastAPI, Uvicorn, Pydantic Settings, AsyncPG, Python 3.11+ |
 | **Database & GIS** | PostgreSQL 15, PostGIS 3.3, GeoAlchemy2, SQLAlchemy 2.0 (Async) |
 | **Streaming & Pub/Sub**| Apache Kafka / Redpanda (`aiokafka`), Redis 7 Alpine (`redis-py`) |
-| **Media Storage** | MinIO (S3-compatible object storage) |
-| **Internationalization** | i18next bilingual support (English & हिन्दी) |
+| **Media Storage** | MinIO (S3-compatible distributed object storage) |
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- [Docker & Docker Compose](https://www.docker.com/)
 - [Node.js](https://nodejs.org/) (v18.0+)
 - [Python](https://www.python.org/) (v3.11+)
+- [Docker & Docker Compose](https://www.docker.com/) *(Optional for full infrastructure stack)*
 
 ---
 
-### Step 1: Start Infrastructure Containers
+### Step 1: Run the Frontend (Quick Start)
+
+```bash
+# In the project root directory
+npm install
+npm run dev
+```
+
+The application will be live at: **`http://localhost:5173`**
+
+---
+
+### Step 2: Start Infrastructure Containers *(Optional)*
 
 Spin up PostgreSQL (PostGIS), Redpanda (Kafka), Redis, and MinIO:
 
@@ -126,17 +144,22 @@ docker compose up -d
 
 ---
 
-### Step 2: Run the FastAPI Backend
+### Step 3: Run the FastAPI Backend *(Optional)*
 
 ```bash
 cd backend
 
 # Create virtual environment and install dependencies
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# On Windows:
+.\.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run the API server
+# Start the API server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -145,25 +168,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
-### Step 3: Run the React 19 Frontend
-
-```bash
-# In the project root directory
-npm install
-npm run dev
-```
-
-The application will be live at **`http://localhost:5173`**.
-
----
-
 ## 🔑 Demo Analyst Credentials
 
-To access analyst-restricted dashboards (Verification Queue, Duplicate Clusters, Audit Logs, Real-Time SSE Stream):
+To access analyst-restricted dashboards (*Verification Queue, Duplicate Clusters, Incident Analytics, Pipeline Sources, Audit Logs*):
 
 - **Email:** `analyst@imd.gov.in`
 - **Password:** `Analyst@123`
-- *Or click "Autofill Demo Analyst" directly in the Topbar Login Modal.*
+- *Or click **"Autofill Demo Analyst"** directly inside the Topbar Login Modal.*
 
 ---
 
@@ -173,9 +184,9 @@ To access analyst-restricted dashboards (Verification Queue, Duplicate Clusters,
 
 | Method | Path | Headers / Params | Description |
 |---|---|---|---|
-| `POST` | `/v1/reports` | `X-Device-Id` (req), `multipart/form-data` | Ingests report, saves media to MinIO, pushes to `raw.citizen`. |
+| `POST` | `/v1/reports` | `X-Device-Id` (req), `multipart/form-data` | Ingests raw report, saves media to MinIO, pushes to `raw.citizen`. |
 | `POST` | `/v1/reports/batch-sync` | `X-Device-Id` (req), `application/json` | PWA offline synchronization with `client_report_id` idempotency. |
-| `GET` | `/v1/events` | `bbox`, `lat`, `lon`, `radius_km`, `category` | Public event list (forced filter: `confirmed`, `active`). |
+| `GET` | `/v1/events` | `bbox`, `lat`, `lon`, `radius_km`, `category` | Public event list (enforces query filter: `confirmed`, `active`). |
 | `GET` | `/v1/reports/mine` | `X-Device-Id` (req) | Returns reports submitted by the requesting device session. |
 
 ### Analyst / Administrative Endpoints (Admin JWT Required)
@@ -196,7 +207,6 @@ To access analyst-restricted dashboards (Verification Queue, Duplicate Clusters,
 The backend includes a comprehensive, isolated integration and unit test suite verified with Pytest:
 
 ```bash
-# Run complete test suite (82 passing tests)
 pytest backend/tests/ -v
 ```
 
@@ -215,6 +225,6 @@ pytest backend/tests/ -v
 
 ---
 
-## 📄 License & Attribution
+## 👥 Team & Attribution
 
-Developed for the **Smart India Hackathon (SIH26069)** under the auspices of the **Ministry of Earth Sciences (MoES)** and the **India Meteorological Department (IMD)**.
+Developed by **Team Skyscrapers** for the **Smart India Hackathon (SIH26069)** under the auspices of the **Ministry of Earth Sciences (MoES)** and the **India Meteorological Department (IMD)**.

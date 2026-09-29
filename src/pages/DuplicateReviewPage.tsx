@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Duplicate Review Page
+   SkySignal — Duplicate Review Page
    NLP Spatiotemporal Clustering & Report Fusion Review
    94% similarity detection with side-by-side merge triage
    ═══════════════════════════════════════════════════════ */
@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react';
 import {
   Copy,
   GitMerge,
-  Sparkles,
   CheckCircle2,
   MapPin,
   Clock,
@@ -50,23 +49,11 @@ export default function DuplicateReviewPage() {
     <div className="space-y-6">
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Copy size={22} className="text-sky-600" />
-            <h1 className="text-[22px] font-extrabold text-slate-900 tracking-tight">
-              NLP Duplicate Clustering Review
-            </h1>
-          </div>
-          <p className="text-[13px] text-slate-500">
-            Semantic transformer embeddings group corroborated reports within 15-minute / 2km spatiotemporal windows.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 text-[12px] font-bold flex items-center gap-1.5">
-            <Sparkles size={14} />
-            <span>MiniLM-L6-v2 Embeddings Active</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <Copy size={22} className="text-sky-600" />
+          <h1 className="text-[22px] font-extrabold text-slate-900 tracking-tight">
+            Duplicate Review
+          </h1>
         </div>
       </div>
 

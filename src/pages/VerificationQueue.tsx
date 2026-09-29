@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Verification Queue Page
+   SkySignal — Verification Queue Page
    Analyst Triage Center for incoming crowd & sensor reports
    Bulk Action Toolbar, 3 Triage Filter Tabs, Misleading Probability Meter,
    Media Lightbox, Evidence Inspector Modal, and Zero-State View.
@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
   CheckCircle2,
   XCircle,
@@ -29,21 +30,25 @@ import {
 import { getReports, bulkActionReports } from '../services/mockApi';
 import { CATEGORY_CONFIG } from '../data/mock';
 import type { Report, WeatherCategory } from '../types/weather';
+import { translateCategory, translateLifecycle } from '../lib/hindiTranslations';
 
-function getRelativeTime(dateStr: string): string {
+function getRelativeTime(dateStr: string, isHindi?: boolean): string {
   const diffMs = Math.max(0, Date.now() - new Date(dateStr).getTime());
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return isHindi ? 'अभी-अभी' : 'Just now';
+  if (mins < 60) return isHindi ? `${mins} मिनट पहले` : `${mins}m ago`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return isHindi ? `${hours} घंटे पहले` : `${hours}h ago`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return isHindi ? `${days} दिन पहले` : `${days}d ago`;
 }
 
 type TriageTab = 'pending' | 'high_risk' | 'delayed';
 
 export default function VerificationQueue() {
+  const { i18n } = useTranslation();
+  const isHindi = i18n.language === 'hi';
+
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -164,13 +169,10 @@ export default function VerificationQueue() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck size={22} className="text-sky-600 animate-pulse" />
-            <h1 className="text-[22px] font-black text-slate-900 tracking-tight font-['Outfit']">
-              IMD Operational Verification Queue
+            <h1 className="text-[22px] font-black text-slate-900 tracking-tight">
+              {isHindi ? 'आईएमडी परिचालन सत्यापन कतार' : 'IMD Operational Verification Queue'}
             </h1>
           </div>
-          <p className="text-[13px] text-slate-500">
-            Real-time human-in-the-loop analyst triage gate with automated NLP hallucination and misleading risk filtering.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -179,7 +181,7 @@ export default function VerificationQueue() {
             className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200/90 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin text-sky-600' : ''} />
-            <span>Sync Feed</span>
+            <span>{isHindi ? 'फ़ीड सिंक करें' : 'Sync Feed'}</span>
           </button>
         </div>
       </div>
@@ -217,7 +219,7 @@ export default function VerificationQueue() {
               }`}
             >
               <Clock size={14} className={activeTab === 'pending' ? 'text-amber-500' : 'text-slate-400'} />
-              <span>All Pending</span>
+              <span>{isHindi ? 'सभी लंबित' : 'All Pending'}</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                 activeTab === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200/70 text-slate-600'
               }`}>
@@ -237,7 +239,7 @@ export default function VerificationQueue() {
               }`}
             >
               <ShieldAlert size={14} className="text-rose-600" />
-              <span>High Misleading Risk (p &gt; 0.7)</span>
+              <span>{isHindi ? 'उच्च भ्रामक जोखिम (p > 0.7)' : 'High Misleading Risk (p > 0.7)'}</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                 activeTab === 'high_risk' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200/70 text-slate-600'
               }`}>
@@ -257,7 +259,7 @@ export default function VerificationQueue() {
               }`}
             >
               <Radio size={14} className="text-indigo-600" />
-              <span>Delayed / Offline Synced</span>
+              <span>{isHindi ? 'विलंबित / ऑफ़लाइन सिंक' : 'Delayed / Offline Synced'}</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                 activeTab === 'delayed' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200/70 text-slate-600'
               }`}>
@@ -273,7 +275,7 @@ export default function VerificationQueue() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search keyword, city, or ID..."
+              placeholder={isHindi ? 'कीवर्ड, शहर या आईडी खोजें...' : 'Search keyword, city, or ID...'}
               className="w-full pl-9 pr-3.5 py-2 text-[12px] bg-slate-50 border border-slate-200/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium text-slate-800"
             />
           </div>
@@ -283,7 +285,7 @@ export default function VerificationQueue() {
         <div className="flex items-center gap-2 flex-wrap text-[11px]">
           <span className="font-bold text-slate-400 flex items-center gap-1 uppercase tracking-wider">
             <Filter size={12} />
-            Hazard Filter:
+            {isHindi ? 'आपदा फ़िल्टर:' : 'Hazard Filter:'}
           </span>
           <button
             onClick={() => setCategoryFilter('all')}
@@ -293,7 +295,7 @@ export default function VerificationQueue() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            All Hazards
+            {isHindi ? 'सभी खतरे' : 'All Hazards'}
           </button>
           {(['rainfall', 'thunderstorm', 'flooding', 'heatwave', 'fog', 'dust storm', 'strong wind'] as WeatherCategory[]).map((cat) => {
             const emojis: Record<WeatherCategory, string> = {
@@ -316,7 +318,7 @@ export default function VerificationQueue() {
                 }`}
               >
                 <span>{emojis[cat]}</span>
-                <span>{cat}</span>
+                <span>{translateCategory(cat, isHindi)}</span>
               </button>
             );
           })}
@@ -328,10 +330,10 @@ export default function VerificationQueue() {
         <div className="sticky top-20 z-30 p-3.5 rounded-2xl bg-slate-900 text-white shadow-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4 animate-fade-in">
           <div className="flex items-center gap-3">
             <span className="px-3 py-1 rounded-xl bg-sky-500/20 border border-sky-400/30 text-sky-300 text-[12px] font-black tracking-wide">
-              {selectedIds.size} Selected
+              {selectedIds.size} {isHindi ? 'चयनित' : 'Selected'}
             </span>
             <span className="text-[12px] font-semibold text-slate-300 hidden sm:inline">
-              Batch Decision Actions:
+              {isHindi ? 'सामूहिक निर्णय कार्रवाइयां:' : 'Batch Decision Actions:'}
             </span>
           </div>
 
@@ -341,20 +343,20 @@ export default function VerificationQueue() {
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <CheckCircle2 size={16} />
-              <span>Approve Selected ({selectedIds.size})</span>
+              <span>{isHindi ? `चयनित स्वीकृत करें (${selectedIds.size})` : `Approve Selected (${selectedIds.size})`}</span>
             </button>
             <button
               onClick={() => executeBulkAction('reject')}
               className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[12px] font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <XCircle size={16} />
-              <span>Reject Selected</span>
+              <span>{isHindi ? 'चयनित अस्वीकार करें' : 'Reject Selected'}</span>
             </button>
             <button
               onClick={() => setSelectedIds(new Set())}
               className="px-3 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-[12px] font-semibold transition-colors cursor-pointer"
             >
-              Clear
+              {isHindi ? 'हटाएं' : 'Clear'}
             </button>
           </div>
         </div>
@@ -371,11 +373,13 @@ export default function VerificationQueue() {
           ) : (
             <Square size={17} className="text-slate-400" />
           )}
-          <span>Select All on View ({filteredReports.length})</span>
+          <span>{isHindi ? `सभी चुनें (${filteredReports.length})` : `Select All on View (${filteredReports.length})`}</span>
         </button>
 
         <span className="text-[11px] text-slate-400 font-medium">
-          Showing {filteredReports.length} {activeTab.replace('_', ' ')} incident reports
+          {isHindi
+            ? `${filteredReports.length} रिपोर्टें दिखाई जा रही हैं`
+            : `Showing ${filteredReports.length} ${activeTab.replace('_', ' ')} incident reports`}
         </span>
       </div>
 
@@ -385,11 +389,13 @@ export default function VerificationQueue() {
           <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-4 border border-emerald-200">
             <CheckCircle2 size={32} />
           </div>
-          <h2 className="text-[20px] font-black text-slate-900 font-['Outfit'] mb-2">
-            You're all caught up! No pending reports require triage.
+          <h2 className="text-[20px] font-black text-slate-900 mb-2">
+            {isHindi ? 'सभी रिपोर्टें जांची जा चुकी हैं! कोई लंबित रिपोर्ट नहीं है।' : "You're all caught up! No pending reports require triage."}
           </h2>
           <p className="text-[13px] text-slate-500 max-w-md mx-auto mb-6">
-            All meteorological observations in this filter category have been verified or resolved. New citizen telemetry and social stream signals will populate automatically.
+            {isHindi
+              ? 'इस श्रेणी की सभी मौसमी रिपोर्टें सत्यापित या हल हो चुकी हैं। नई नागरिक रिपोर्टें आते ही यहां दिखेंगी।'
+              : 'All meteorological observations in this filter category have been verified or resolved. New citizen telemetry and social stream signals will populate automatically.'}
           </p>
           <button
             onClick={() => {
@@ -400,7 +406,7 @@ export default function VerificationQueue() {
             className="px-4 py-2 bg-sky-600 text-white rounded-xl text-[12px] font-bold hover:bg-sky-700 transition-colors shadow-xs cursor-pointer inline-flex items-center gap-1.5"
           >
             <RefreshCw size={14} />
-            <span>Reset All Filters</span>
+            <span>{isHindi ? 'फ़िल्टर रीसेट करें' : 'Reset All Filters'}</span>
           </button>
         </div>
       ) : (
@@ -472,14 +478,14 @@ export default function VerificationQueue() {
                         style={{ backgroundColor: catConfig?.bgColor, color: catConfig?.color }}
                       >
                         <span>{catConfig?.icon}</span>
-                        <span>{report.event_category}</span>
+                        <span>{translateCategory(report.event_category, isHindi)}</span>
                       </span>
 
                       {/* Delayed Sync Flag */}
                       {report.synced_late && (
                         <span className="px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] flex items-center gap-1">
                           <Radio size={10} className="animate-pulse" />
-                          <span>Delayed Offline Sync</span>
+                          <span>{isHindi ? 'विलंबित ऑफ़लाइन सिंक' : 'Delayed Offline Sync'}</span>
                         </span>
                       )}
 
@@ -493,7 +499,7 @@ export default function VerificationQueue() {
                             : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {report.status}
+                        {translateLifecycle(report.status, isHindi)}
                       </span>
                     </div>
 
@@ -514,7 +520,7 @@ export default function VerificationQueue() {
                       <span>•</span>
                       <div className="flex items-center gap-1 text-slate-500">
                         <Clock size={12} />
-                        <span>{getRelativeTime(report.reported_at)}</span>
+                        <span>{getRelativeTime(report.reported_at, isHindi)}</span>
                         <span className="text-slate-400">({new Date(report.reported_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
                       </div>
                       <span>•</span>
@@ -528,7 +534,7 @@ export default function VerificationQueue() {
                       <div className="flex items-center justify-between text-[11px] mb-1">
                         <span className="font-bold flex items-center gap-1 text-slate-500">
                           {isHighMisleading && <AlertTriangle size={12} className="text-rose-600" />}
-                          Misleading Probability ($P_{'{misleading}'}$):
+                          {isHindi ? 'भ्रामक संभावना (P):' : 'Misleading Probability (P):'}
                         </span>
                         <span
                           className={`font-black font-mono text-[12px] ${
@@ -539,7 +545,7 @@ export default function VerificationQueue() {
                               : 'text-amber-600'
                           }`}
                         >
-                          {meterPct}% {isHighMisleading ? '(High Risk)' : isLowMisleading ? '(Credible)' : '(Moderate)'}
+                          {meterPct}% {isHighMisleading ? (isHindi ? '(उच्च जोखिम)' : '(High Risk)') : isLowMisleading ? (isHindi ? '(विश्वसनीय)' : '(Credible)') : (isHindi ? '(मध्यम)' : '(Moderate)')}
                         </span>
                       </div>
 
@@ -570,7 +576,7 @@ export default function VerificationQueue() {
                         setPreviewMedia(report.media_urls[0]);
                       }}
                       className="relative group/media overflow-hidden rounded-xl border border-slate-200/90 w-16 h-16 bg-slate-100 flex items-center justify-center cursor-pointer shadow-xs"
-                      title="Inspect ground media evidence"
+                      title={isHindi ? 'प्रमाण फोटो देखें' : 'Inspect ground media evidence'}
                     >
                       <img
                         src={report.media_urls[0]}
@@ -593,7 +599,7 @@ export default function VerificationQueue() {
                     title="View Evidence Details"
                   >
                     <FileText size={13} className="text-slate-500" />
-                    <span>View Evidence</span>
+                    <span>{isHindi ? 'प्रमाण देखें' : 'View Evidence'}</span>
                   </button>
 
                   {/* Single-Click Approve (Checkmark) & Reject (X) */}
@@ -605,7 +611,7 @@ export default function VerificationQueue() {
                           executeSingleAction(report.id, 'verify');
                         }}
                         className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 border border-emerald-200/80 transition-colors cursor-pointer"
-                        title="Approve Report"
+                        title={isHindi ? 'रिपोर्ट स्वीकृत करें' : 'Approve Report'}
                         aria-label="Approve report"
                       >
                         <CheckCircle2 size={18} />
@@ -619,7 +625,7 @@ export default function VerificationQueue() {
                           executeSingleAction(report.id, 'reject');
                         }}
                         className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200/80 transition-colors cursor-pointer"
-                        title="Reject Report"
+                        title={isHindi ? 'रिपोर्ट अस्वीकार करें' : 'Reject Report'}
                         aria-label="Reject report"
                       >
                         <XCircle size={18} />
@@ -648,7 +654,7 @@ export default function VerificationQueue() {
               <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/90">
                 <span className="text-[13px] font-bold text-white flex items-center gap-2">
                   <Sparkles size={15} className="text-sky-400" />
-                  Attached Observation Lightbox
+                  {isHindi ? 'संलग्न अवलोकन मीडिया लाइटबॉक्स' : 'Attached Observation Lightbox'}
                 </span>
                 <button
                   onClick={() => setPreviewMedia(null)}
@@ -667,7 +673,9 @@ export default function VerificationQueue() {
               </div>
 
               <div className="p-4 bg-slate-900 text-center text-slate-400 text-[12px] border-t border-slate-800">
-                High-resolution geotagged evidence attached to ground observation.
+                {isHindi
+                  ? 'भू-टैग किया गया उच्च-रिज़ॉल्यूशन अवलोकन प्रमाण।'
+                  : 'High-resolution geotagged evidence attached to ground observation.'}
               </div>
             </div>
           </div>,
@@ -693,11 +701,13 @@ export default function VerificationQueue() {
                     <FileText size={18} />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-black text-slate-900 font-['Outfit']">
-                      Evidence Dossier — {evidenceReport.id}
+                    <h3 className="text-[15px] font-black text-slate-900">
+                      {isHindi ? `प्रमाण डोजियर — ${evidenceReport.id}` : `Evidence Dossier — ${evidenceReport.id}`}
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Source provenance and automated ML NLP classification telemetry
+                      {isHindi
+                        ? 'स्रोत उत्पत्ति और स्वचालित एमएल एनएलपी वर्गीकरण टेलीमेट्री'
+                        : 'Source provenance and automated ML NLP classification telemetry'}
                     </p>
                   </div>
                 </div>
@@ -714,7 +724,7 @@ export default function VerificationQueue() {
                 {/* Raw Statement Quote */}
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                    Raw Ground Statement
+                    {isHindi ? 'मूल नागरिक विवरण' : 'Raw Ground Statement'}
                   </span>
                   <p className="text-slate-900 font-medium italic">
                     "{evidenceReport.raw_text}"
@@ -724,21 +734,21 @@ export default function VerificationQueue() {
                 {/* Grid Metadata */}
                 <div className="grid grid-cols-2 gap-3 text-[12px]">
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Platform Source</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{isHindi ? 'प्लेटफ़ॉर्म स्रोत' : 'Platform Source'}</span>
                     <div className="font-bold text-slate-800 capitalize mt-0.5">
                       {evidenceReport.source_platform.replace('_', ' ')} ({evidenceReport.source_handle})
                     </div>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Hazard Category</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{isHindi ? 'आपदा श्रेणी' : 'Hazard Category'}</span>
                     <div className="font-bold text-slate-800 capitalize mt-0.5">
-                      {evidenceReport.event_category} (Confidence: {(evidenceReport.category_confidence * 100).toFixed(0)}%)
+                      {translateCategory(evidenceReport.event_category, isHindi)} ({isHindi ? 'विश्वसनीयता' : 'Confidence'}: {(evidenceReport.category_confidence * 100).toFixed(0)}%)
                     </div>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Location & Coordinates</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{isHindi ? 'स्थान एवं निर्देशांक' : 'Location & Coordinates'}</span>
                     <div className="font-bold text-slate-800 mt-0.5">
                       {evidenceReport.city}, {evidenceReport.state}
                     </div>
@@ -748,7 +758,7 @@ export default function VerificationQueue() {
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Misleading Probability</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{isHindi ? 'भ्रामक संभावना' : 'Misleading Probability'}</span>
                     <div className="font-black text-rose-600 mt-0.5">
                       {(evidenceReport.p_misleading * 100).toFixed(1)}%
                     </div>
@@ -759,7 +769,7 @@ export default function VerificationQueue() {
                 {evidenceReport.media_urls.length > 0 && (
                   <div>
                     <span className="text-[11px] font-bold text-slate-600 block mb-2">
-                      Attached Evidence Photos ({evidenceReport.media_urls.length})
+                      {isHindi ? `संलग्न प्रमाण तस्वीरें (${evidenceReport.media_urls.length})` : `Attached Evidence Photos (${evidenceReport.media_urls.length})`}
                     </span>
                     <div className="grid grid-cols-2 gap-3">
                       {evidenceReport.media_urls.map((url, i) => (
@@ -781,7 +791,7 @@ export default function VerificationQueue() {
                   onClick={() => setEvidenceReport(null)}
                   className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 text-[12px] font-bold transition-colors cursor-pointer"
                 >
-                  Close Dossier
+                  {isHindi ? 'डोजियर बंद करें' : 'Close Dossier'}
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -793,7 +803,7 @@ export default function VerificationQueue() {
                     className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[12px] font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <XCircle size={15} />
-                    <span>Reject as False</span>
+                    <span>{isHindi ? 'गलत मानकर अस्वीकार करें' : 'Reject as False'}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -803,7 +813,7 @@ export default function VerificationQueue() {
                     className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <CheckCircle2 size={15} />
-                    <span>Approve & Verify</span>
+                    <span>{isHindi ? 'सत्यापित और स्वीकृत करें' : 'Approve & Verify'}</span>
                   </button>
                 </div>
               </div>

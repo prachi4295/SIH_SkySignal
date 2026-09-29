@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — App Entry & Router
+   SkySignal — App Entry & Router
    Client-side SPA routing with React.lazy code splitting
    AuthProvider wrapper + responsive layout shell
    ═══════════════════════════════════════════════════════ */
@@ -7,22 +7,27 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { LocationProvider } from './context/LocationContext';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Dynamic code splitting for all route pages
 const Overview = lazy(() => import('./pages/Overview'));
-const EventExplorer = lazy(() => import('./pages/EventExplorer'));
 const VerificationQueue = lazy(() => import('./pages/VerificationQueue'));
 const DuplicateReview = lazy(() => import('./pages/DuplicateReview'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const DataSourcesPage = lazy(() => import('./pages/DataSourcesPage'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const CitizenPortal = lazy(() => import('./pages/CitizenPortal'));
+const ReliefNetwork = lazy(() => import('./pages/ReliefNetwork'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const EmergencyDirectoryPage = lazy(() => import('./pages/EmergencyDirectoryPage'));
 const PlaceholderPage = lazy(() => import('./pages/PlaceholderPage'));
 
 // Sleek atmospheric loading spinner fallback
 function RouteLoadingFallback() {
+  const isHindi = typeof window !== 'undefined' && localStorage.getItem('i18nextLng') === 'hi';
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3 animate-fade-in">
       <div className="relative flex h-10 w-10">
@@ -32,7 +37,7 @@ function RouteLoadingFallback() {
         </span>
       </div>
       <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">
-        Loading Telemetry Stream...
+        {isHindi ? 'टेलीमेट्री स्ट्रीम लोड हो रही है...' : 'Loading Telemetry Stream...'}
       </p>
     </div>
   );
@@ -41,11 +46,12 @@ function RouteLoadingFallback() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <LocationProvider>
+        <BrowserRouter>
+          <Routes>
           <Route element={<AppLayout />}>
             {/* ── Public Routes (Accessible by Guests & Admins in Read-Only Mode) ── */}
-            {/* Situational Overview */}
+            {/* Weather Status (Home) */}
             <Route
               index
               element={
@@ -56,26 +62,50 @@ export default function App() {
             />
             <Route path="/overview" element={<Navigate to="/" replace />} />
 
-            {/* Event Explorer (/explorer and alias /events) */}
+            {/* Redirect legacy explorer paths to Weather Status */}
+            {/* Crisis Aid & Disaster Relief Network */}
             <Route
-              path="/explorer"
+              path="/relief-network"
               element={
                 <Suspense fallback={<RouteLoadingFallback />}>
-                  <EventExplorer />
+                  <ReliefNetwork />
                 </Suspense>
               }
             />
-            <Route path="/events" element={<Navigate to="/explorer" replace />} />
+            <Route path="/aid" element={<Navigate to="/relief-network" replace />} />
+            <Route path="/relief" element={<Navigate to="/relief-network" replace />} />
 
-            {/* Analytics Dashboard */}
+            {/* Emergency Directory & Helplines */}
             <Route
-              path="/analytics"
+              path="/emergency"
               element={
                 <Suspense fallback={<RouteLoadingFallback />}>
-                  <Analytics />
+                  <EmergencyDirectoryPage />
                 </Suspense>
               }
             />
+            <Route path="/helplines" element={<Navigate to="/emergency" replace />} />
+
+            {/* Settings */}
+            <Route
+              path="/settings"
+              element={
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <SettingsPage />
+                </Suspense>
+              }
+            />
+
+            {/* Privacy Policy */}
+            <Route
+              path="/privacy"
+              element={
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <PrivacyPolicyPage />
+                </Suspense>
+              }
+            />
+            <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
 
             {/* Citizen Portal (/report and alias /citizen) */}
             <Route
@@ -88,8 +118,18 @@ export default function App() {
             />
             <Route path="/citizen" element={<Navigate to="/report" replace />} />
 
-            {/* ── Protected Admin Routes (Admins Only — Verification, Duplicates, Audit) ── */}
+            {/* ── Protected Admin Routes (Admins Only — Verification, Duplicates, Audit, Analytics) ── */}
             <Route element={<ProtectedRoute />}>
+              {/* Analytics Dashboard */}
+              <Route
+                path="/analytics"
+                element={
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <Analytics />
+                  </Suspense>
+                }
+              />
+
               {/* Verification Queue */}
               <Route
                 path="/verification"
@@ -146,6 +186,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </LocationProvider>
     </AuthProvider>
   );
 }

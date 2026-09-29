@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Event Explorer Page
+   SkySignal — Event Explorer Page
    National Weather Intelligence Platform (IMD / SIH26069)
    Multi-axis filter bar: Time range, Category multi-select pills,
    Region buttons (North, South, East, West, Central), Severity,
@@ -14,20 +14,17 @@ import {
   Table as TableIcon,
   LayoutGrid,
   Download,
-  Calendar,
   MapPin,
-  ExternalLink,
   RotateCcw,
-  Check,
 } from 'lucide-react';
 import GeoRadarMap from '../components/map/GeoRadarMap';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
 import { mockWeatherEvents } from '../lib/mockData';
+import { deduplicateWeatherEvents } from '../services/eventDeduplication';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../data/mock';
 import { useAuth } from '../context/AuthContext';
-import type { WeatherEvent, WeatherCategory, Severity, LifecycleStatus } from '../types/weather';
+import type { WeatherEvent, Severity, LifecycleStatus } from '../types/weather';
 
-type TimeRangeOption = '24h' | '7d' | 'custom';
 type RegionOption = 'all' | 'north' | 'south' | 'east' | 'west' | 'central';
 type ViewModeOption = 'split' | 'table';
 
@@ -38,16 +35,6 @@ const REGION_MAP: Record<Exclude<RegionOption, 'all'>, string[]> = {
   west: ['maharashtra', 'gujarat'],
   central: ['madhya pradesh', 'chhattisgarh'],
 };
-
-const ALL_CATEGORIES: WeatherCategory[] = [
-  'rainfall',
-  'thunderstorm',
-  'flooding',
-  'heatwave',
-  'fog',
-  'dust storm',
-  'strong wind',
-];
 
 const LIFECYCLE_OPTIONS: { id: LifecycleStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'All Lifecycle' },
@@ -65,10 +52,6 @@ export default function EventExplorer() {
 
   // Filter States
   const [search, setSearch] = useState('');
-  const [timeRange, setTimeRange] = useState<TimeRangeOption>('7d');
-  const [customStartDate, setCustomStartDate] = useState('2026-09-17');
-  const [customEndDate, setCustomEndDate] = useState('2026-09-24');
-  const [selectedCategories, setSelectedCategories] = useState<Set<WeatherCategory>>(new Set());
   const [selectedRegion, setSelectedRegion] = useState<RegionOption>('all');
   const [selectedSeverity, setSelectedSeverity] = useState<Severity | 'all'>('all');
   const [selectedLifecycle, setSelectedLifecycle] = useState<LifecycleStatus | 'all'>('all');
@@ -89,21 +72,10 @@ export default function EventExplorer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Multi-select category toggle
-  const toggleCategory = (cat: WeatherCategory) => {
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
-      return next;
-    });
-  };
-
-  const clearCategories = () => setSelectedCategories(new Set());
-
   // Filtered Events
   const filteredEvents = useMemo(() => {
-    return mockWeatherEvents.filter((evt) => {
+    const deduplicated = deduplicateWeatherEvents(mockWeatherEvents);
+    return deduplicated.filter((evt) => {
       // 1. Text Search
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -114,12 +86,7 @@ export default function EventExplorer() {
         if (!matchTitle && !matchCity && !matchState && !matchId) return false;
       }
 
-      // 2. Category Multi-select (if empty, matches all)
-      if (selectedCategories.size > 0 && !selectedCategories.has(evt.category)) {
-        return false;
-      }
-
-      // 3. Region Filter
+      // 2. Region Filter
       if (selectedRegion !== 'all') {
         const targetStates = REGION_MAP[selectedRegion];
         const stateLower = evt.state.toLowerCase();
@@ -128,45 +95,28 @@ export default function EventExplorer() {
         }
       }
 
-      // 4. Severity Filter
+      // 3. Severity Filter
       if (selectedSeverity !== 'all' && evt.severity !== selectedSeverity) {
         return false;
       }
 
-      // 5. Lifecycle Filter
+      // 4. Lifecycle Filter
       if (selectedLifecycle !== 'all' && evt.lifecycle_status !== selectedLifecycle) {
         return false;
-      }
-
-      // 6. Time Range
-      if (timeRange === '24h') {
-        const hoursAgo = (Date.now() - new Date(evt.last_updated_at).getTime()) / 3600000;
-        if (hoursAgo > 24) return false;
-      } else if (timeRange === 'custom') {
-        const evtTime = new Date(evt.last_updated_at).getTime();
-        const start = new Date(customStartDate).getTime();
-        const end = new Date(customEndDate).getTime() + 86400000;
-        if (evtTime < start || evtTime > end) return false;
       }
 
       return true;
     });
   }, [
     search,
-    selectedCategories,
     selectedRegion,
     selectedSeverity,
     selectedLifecycle,
-    timeRange,
-    customStartDate,
-    customEndDate,
   ]);
 
   // Reset Filters
   const handleResetFilters = () => {
     setSearch('');
-    setTimeRange('7d');
-    setSelectedCategories(new Set());
     setSelectedRegion('all');
     setSelectedSeverity('all');
     setSelectedLifecycle('all');
@@ -185,8 +135,6 @@ export default function EventExplorer() {
 
   const hasActiveFilters =
     search.trim() !== '' ||
-    timeRange !== '7d' ||
-    selectedCategories.size > 0 ||
     selectedRegion !== 'all' ||
     selectedSeverity !== 'all' ||
     selectedLifecycle !== 'all';
@@ -198,7 +146,7 @@ export default function EventExplorer() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <SlidersHorizontal size={22} className="text-sky-600" />
-            <h1 className="text-[22px] font-black text-slate-900 tracking-tight font-['Outfit']">
+            <h1 className="text-[22px] font-black text-slate-900 tracking-tight">
               Historical Event Explorer & Spatial Directory
             </h1>
           </div>
@@ -245,161 +193,31 @@ export default function EventExplorer() {
         </div>
       </div>
 
-      {/* ── Multi-Axis Filter Bar ── */}
-      <div className="glass-card p-5 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
-        {/* Row 1: Search + Time Range + Reset */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Instant Search with shortcut '/' */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* ── Table Mode Search & Filter Bar (Shown only in Table view) ── */}
+      {viewMode === 'table' && (
+        <div className="bg-white p-3.5 rounded-2xl border border-sky-100 shadow-xs flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search title, city, state, or event ID... (Press '/' to focus)"
-              className="w-full pl-9 pr-12 py-2.5 text-[12px] bg-slate-50 border border-slate-200/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium text-slate-800"
+              placeholder="Search title, city, state, or event ID..."
+              className="w-full pl-9 pr-8 py-2 text-[12.5px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium text-slate-800"
             />
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-white border border-slate-200 rounded shadow-2xs">
-              /
-            </kbd>
-          </div>
-
-          {/* Time Range Selector */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Calendar size={13} />
-              Time:
-            </span>
-            <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200/70 text-[11px] font-bold">
-              <button
-                onClick={() => setTimeRange('24h')}
-                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  timeRange === '24h'
-                    ? 'bg-sky-600 text-white shadow-2xs font-extrabold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Last 24h
-              </button>
-              <button
-                onClick={() => setTimeRange('7d')}
-                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  timeRange === '7d'
-                    ? 'bg-sky-600 text-white shadow-2xs font-extrabold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Last 7 Days
-              </button>
-              <button
-                onClick={() => setTimeRange('custom')}
-                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  timeRange === 'custom'
-                    ? 'bg-sky-600 text-white shadow-2xs font-extrabold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Custom Range
-              </button>
-            </div>
-
-            {hasActiveFilters && (
-              <button
-                onClick={handleResetFilters}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-slate-500 hover:text-rose-600 transition-colors cursor-pointer ml-1"
-                title="Reset all active filters"
-              >
-                <RotateCcw size={12} />
-                <span>Reset</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Custom Date Pickers (if Custom Range selected) */}
-        {timeRange === 'custom' && (
-          <div className="flex items-center gap-3 p-3 bg-sky-50/60 rounded-xl border border-sky-100 text-[12px] animate-fade-in">
-            <span className="font-bold text-sky-800">Date Bounds:</span>
-            <input
-              type="date"
-              value={customStartDate}
-              onChange={(e) => setCustomStartDate(e.target.value)}
-              className="px-2.5 py-1 bg-white border border-sky-200 rounded-lg text-slate-700 font-medium"
-            />
-            <span className="text-slate-400">to</span>
-            <input
-              type="date"
-              value={customEndDate}
-              onChange={(e) => setCustomEndDate(e.target.value)}
-              className="px-2.5 py-1 bg-white border border-sky-200 rounded-lg text-slate-700 font-medium"
-            />
-          </div>
-        )}
-
-        {/* Row 2: Category Multi-Select Pills */}
-        <div className="space-y-1.5 pt-2 border-t border-slate-100">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-bold uppercase tracking-wider text-slate-400">
-              Hazard Categories (Multi-Select):
-            </span>
-            {selectedCategories.size > 0 && (
-              <button
-                onClick={clearCategories}
-                className="text-sky-600 hover:text-sky-800 font-bold cursor-pointer"
-              >
-                Clear Selected ({selectedCategories.size})
-              </button>
-            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {ALL_CATEGORIES.map((cat) => {
-              const isSelected = selectedCategories.has(cat);
-              const emojis: Record<WeatherCategory, string> = {
-                rainfall: '🌧️',
-                thunderstorm: '⚡',
-                flooding: '🌊',
-                heatwave: '🌡️',
-                fog: '🌫️',
-                'dust storm': '🌪️',
-                'strong wind': '💨',
-              };
-
-              return (
-                <button
-                  key={cat}
-                  onClick={() => toggleCategory(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold capitalize transition-all flex items-center gap-1.5 cursor-pointer ${
-                    isSelected
-                      ? 'bg-sky-600 text-white shadow-xs ring-2 ring-sky-300'
-                      : 'bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 border border-slate-200/60'
-                  }`}
-                >
-                  <span>{emojis[cat]}</span>
-                  <span>{cat}</span>
-                  {isSelected && <Check size={12} className="ml-0.5" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Row 3: Region Buttons + Severity + Lifecycle */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-slate-100 text-[12px]">
-          {/* Region Buttons */}
-          <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
-              Geographic Region
-            </span>
-            <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl border border-slate-200/70 text-[11px] font-bold flex-wrap">
+            {/* Region */}
+            <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl border border-slate-200/70 text-[11px] font-bold">
               {(['all', 'north', 'south', 'east', 'west', 'central'] as RegionOption[]).map((reg) => (
                 <button
                   key={reg}
                   onClick={() => setSelectedRegion(reg)}
-                  className={`px-2.5 py-1 rounded-lg capitalize transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg capitalize transition-colors cursor-pointer ${
                     selectedRegion === reg
-                      ? 'bg-white text-slate-900 shadow-2xs font-black'
+                      ? 'bg-white text-sky-900 shadow-2xs font-black'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -407,19 +225,14 @@ export default function EventExplorer() {
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Severity Filter */}
-          <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
-              Severity Tier
-            </span>
+            {/* Severity */}
             <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl border border-slate-200/70 text-[11px] font-bold">
               {(['all', 'minor', 'moderate', 'severe'] as const).map((sev) => (
                 <button
                   key={sev}
                   onClick={() => setSelectedSeverity(sev)}
-                  className={`px-2.5 py-1 rounded-lg capitalize transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg capitalize transition-colors cursor-pointer ${
                     selectedSeverity === sev
                       ? sev === 'severe'
                         ? 'bg-rose-600 text-white font-black shadow-2xs'
@@ -435,54 +248,110 @@ export default function EventExplorer() {
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Lifecycle State */}
-          <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
-              Lifecycle State
-            </span>
-            <select
-              value={selectedLifecycle}
-              onChange={(e) => setSelectedLifecycle(e.target.value as any)}
-              className="w-full py-1.5 px-3 text-[12px] bg-slate-50 border border-slate-200/90 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              aria-label="Filter by lifecycle"
-            >
-              {LIFECYCLE_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            {hasActiveFilters && (
+              <button
+                onClick={handleResetFilters}
+                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
+                title="Reset filters"
+              >
+                <RotateCcw size={12} />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
-
-        {/* Query Matches Counter Bar */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
-          <span>
-            Matched <strong className="text-slate-800">{filteredEvents.length}</strong> of{' '}
-            {mockWeatherEvents.length} national weather incidents
-          </span>
-          <span className="font-mono text-[10px]">
-            Spatial Engine: PostGIS + Leaflet MarkerCluster
-          </span>
-        </div>
-      </div>
+      )}
 
       {/* ── View Mode: "Split Map & Dense Grid" vs "Full Directory Table" ── */}
       {viewMode === 'split' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
-          {/* Left Column: Interactive Radar Map (lg:col-span-7) */}
-          <div className="lg:col-span-7 glass-card rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm p-1 min-h-[560px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in items-start">
+          {/* Left Column: Interactive Radar Map with Embedded Filter Toolbar (lg:col-span-7) */}
+          <div className="lg:col-span-7 rounded-3xl overflow-hidden border-2 border-sky-200 shadow-md bg-white relative h-[600px] lg:h-[calc(100vh-175px)] min-h-[520px]">
+            {/* Embedded Floating Filter Bar on Map */}
+            <div className="absolute top-3 left-3 right-3 z-10 bg-white/95 backdrop-blur-md rounded-2xl border border-sky-200/80 shadow-md p-2.5 flex flex-wrap items-center justify-between gap-2">
+              {/* Geographic Region Tabs */}
+              <div className="flex items-center gap-1 p-0.5 bg-slate-100/90 rounded-xl border border-slate-200/70 text-[11px] font-bold overflow-x-auto max-w-full">
+                <span className="text-[10px] font-black text-slate-400 uppercase px-1.5 hidden sm:inline">
+                  Region:
+                </span>
+                {(['all', 'north', 'south', 'east', 'west', 'central'] as RegionOption[]).map((reg) => (
+                  <button
+                    key={reg}
+                    onClick={() => setSelectedRegion(reg)}
+                    className={`px-2 py-0.5 rounded-lg capitalize transition-colors cursor-pointer shrink-0 ${
+                      selectedRegion === reg
+                        ? 'bg-white text-sky-900 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {reg}
+                  </button>
+                ))}
+              </div>
+
+              {/* Severity Filter Tabs */}
+              <div className="flex items-center gap-1 p-0.5 bg-slate-100/90 rounded-xl border border-slate-200/70 text-[11px] font-bold">
+                <span className="text-[10px] font-black text-slate-400 uppercase px-1.5 hidden sm:inline">
+                  Severity:
+                </span>
+                {(['all', 'minor', 'moderate', 'severe'] as const).map((sev) => (
+                  <button
+                    key={sev}
+                    onClick={() => setSelectedSeverity(sev)}
+                    className={`px-2 py-0.5 rounded-lg capitalize transition-colors cursor-pointer ${
+                      selectedSeverity === sev
+                        ? sev === 'severe'
+                          ? 'bg-rose-600 text-white font-black shadow-2xs'
+                          : sev === 'moderate'
+                          ? 'bg-sky-600 text-white font-black shadow-2xs'
+                          : sev === 'minor'
+                          ? 'bg-emerald-600 text-white font-black shadow-2xs'
+                          : 'bg-white text-slate-900 font-black shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {sev}
+                  </button>
+                ))}
+              </div>
+
+              {/* Lifecycle Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={selectedLifecycle}
+                  onChange={(e) => setSelectedLifecycle(e.target.value as any)}
+                  className="py-1 px-2 text-[11px] bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  aria-label="Filter by lifecycle"
+                >
+                  {LIFECYCLE_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+
+                {hasActiveFilters && (
+                  <button
+                    onClick={handleResetFilters}
+                    className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="Reset filters"
+                  >
+                    <RotateCcw size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <GeoRadarMap
               events={filteredEvents}
               onSelectEvent={isAdmin ? (evt) => setSelectedEvent(evt) : undefined}
-              height="h-[560px]"
+              height="h-full"
             />
           </div>
 
           {/* Right Column: Dense Grid List (lg:col-span-5) */}
-          <div className="lg:col-span-5 space-y-3 max-h-[580px] overflow-y-auto pr-1">
+          <div className="lg:col-span-5 space-y-3 max-h-[600px] lg:max-h-[calc(100vh-175px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-sky-200">
             {filteredEvents.length === 0 ? (
               <div className="glass-card py-16 text-center text-slate-400 rounded-2xl border border-slate-200">
                 No events match this query combination.
@@ -495,16 +364,25 @@ export default function EventExplorer() {
                 return (
                   <div
                     key={evt.id}
-                    onClick={isAdmin ? () => setSelectedEvent(evt) : undefined}
-                    className={`glass-card p-4 rounded-2xl border border-slate-200/80 transition-all space-y-2.5 ${
-                      isAdmin ? 'hover:border-slate-300 hover:shadow-xs cursor-pointer' : 'cursor-default'
+                    onClick={() => {
+                      setSelectedEvent(evt);
+                      window.dispatchEvent(
+                        new CustomEvent('skysignal:recenter-map', {
+                          detail: { lat: evt.lat, lng: evt.lon, zoom: 15, name: evt.title },
+                        })
+                      );
+                    }}
+                    className={`p-4 rounded-2xl bg-white border-2 border-slate-100 hover:border-sky-300 hover:shadow-md transition-all space-y-2.5 cursor-pointer ${
+                      selectedEvent?.id === evt.id ? 'border-sky-500 ring-2 ring-sky-500/20 bg-sky-50/30' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] font-black text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded">
-                          {evt.id}
-                        </span>
+                        {isAdmin && (
+                          <span className="font-mono text-[10px] font-black text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded">
+                            {evt.id}
+                          </span>
+                        )}
                         <span
                           className="px-2 py-0.5 rounded-full text-[10px] font-extrabold capitalize"
                           style={{ backgroundColor: catMeta?.bgColor, color: catMeta?.color }}
@@ -526,23 +404,19 @@ export default function EventExplorer() {
                       </span>
                     </div>
 
-                    <h4 className="text-[13px] font-black text-slate-900 font-['Outfit'] leading-snug">
+                    <h4 className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-snug hover:text-sky-700 transition-colors">
                       {evt.title}
                     </h4>
 
                     <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                      <div className="flex items-center gap-1 text-slate-600">
+                      <div className="flex items-center gap-1 text-slate-600 font-semibold">
                         <MapPin size={12} className="text-sky-600" />
                         <span>{evt.city}, {evt.state}</span>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sky-700">
-                          {evt.confidence}% AI Conf
-                        </span>
-                        <span>•</span>
-                        <span className="text-slate-400">
-                          {evt.independent_source_count} Sources
+                      <div className="flex items-center gap-1 shrink-0 font-bold">
+                        <span className="text-emerald-700 font-extrabold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[11px]">
+                          {evt.confidence}% confidence
                         </span>
                       </div>
                     </div>
@@ -559,19 +433,18 @@ export default function EventExplorer() {
             <table className="w-full text-left text-[12px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-100/70 text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-5">Incident / Hazard</th>
-                  <th className="py-3 px-3">Location & Region</th>
-                  <th className="py-3 px-3">Severity</th>
-                  <th className="py-3 px-3">Lifecycle State</th>
-                  <th className="py-3 px-4">AI Confidence</th>
-                  <th className="py-3 px-3">Evidence Sources</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                  <th className="py-3.5 px-5">Incident / Hazard</th>
+                  <th className="py-3.5 px-3">Location & Region</th>
+                  <th className="py-3.5 px-3">Severity</th>
+                  <th className="py-3.5 px-3">Lifecycle State</th>
+                  <th className="py-3.5 px-4">AI Confidence</th>
+                  <th className="py-3.5 px-3">Evidence Sources</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
                       No events match the selected multi-axis filters.
                     </td>
                   </tr>
@@ -583,25 +456,23 @@ export default function EventExplorer() {
                     return (
                       <tr
                         key={evt.id}
-                        onClick={isAdmin ? () => setSelectedEvent(evt) : undefined}
-                        className={`transition-colors ${
-                          isAdmin ? 'hover:bg-slate-50/80 cursor-pointer' : 'cursor-default hover:bg-slate-50/40'
-                        }`}
+                        onClick={() => setSelectedEvent(evt)}
+                        className="transition-colors hover:bg-sky-50/50 cursor-pointer"
                       >
-                        {/* Hazard Icon & Title */}
-                        <td className="py-3.5 px-5">
+                        {/* Hazard Icon & Larger Title */}
+                        <td className="py-4 px-5">
                           <div className="flex items-center gap-3">
                             <div
-                              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 text-sm shadow-2xs"
+                              className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 text-base shadow-2xs"
                               style={{ backgroundColor: catMeta?.bgColor, color: catMeta?.color }}
                             >
                               {catMeta?.icon === 'CloudRain' ? '🌧️' : catMeta?.icon === 'Waves' ? '🌊' : catMeta?.icon === 'Thermometer' ? '🌡️' : '⚡'}
                             </div>
                             <div>
-                              <span className="font-mono text-[10px] text-slate-400 font-bold block">
+                              <span className="font-mono text-[11px] text-slate-400 font-bold block">
                                 {evt.id}
                               </span>
-                              <span className="font-extrabold text-slate-900 text-[13px] hover:text-sky-600 transition-colors">
+                              <span className="font-black text-slate-900 text-[15px] sm:text-[16px] hover:text-sky-600 transition-colors leading-snug">
                                 {evt.title}
                               </span>
                             </div>
@@ -609,15 +480,15 @@ export default function EventExplorer() {
                         </td>
 
                         {/* Location */}
-                        <td className="py-3.5 px-3">
-                          <div className="flex items-center gap-1.5 font-medium text-slate-700">
-                            <MapPin size={13} className="text-sky-600 shrink-0" />
+                        <td className="py-4 px-3">
+                          <div className="flex items-center gap-1.5 font-semibold text-slate-700 text-[13px]">
+                            <MapPin size={14} className="text-sky-600 shrink-0" />
                             <span>{evt.city}, {evt.state}</span>
                           </div>
                         </td>
 
                         {/* Severity */}
-                        <td className="py-3.5 px-3">
+                        <td className="py-4 px-3">
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase flex items-center gap-1 w-fit ${
                               evt.severity === 'severe'
@@ -633,20 +504,19 @@ export default function EventExplorer() {
                         </td>
 
                         {/* Lifecycle */}
-                        <td className="py-3.5 px-3">
+                        <td className="py-4 px-3">
                           <span className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 capitalize">
                             {evt.lifecycle_status}
                           </span>
                         </td>
 
-                        {/* Confidence Progress Bar */}
-                        <td className="py-3.5 px-4 min-w-[140px]">
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[11px] font-mono font-bold">
-                              <span className="text-slate-600">{evt.confidence}%</span>
-                              <span className="text-[10px] text-slate-400">Model Fusion</span>
+                        {/* Confidence Progress Bar (Without "Model Fusion") */}
+                        <td className="py-4 px-4 min-w-[130px]">
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-[12px] font-mono font-extrabold">
+                              <span className="text-slate-800">{evt.confidence}%</span>
                             </div>
-                            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                               <div
                                 className={`h-full rounded-full transition-all duration-500 ${
                                   evt.confidence >= 90
@@ -662,28 +532,10 @@ export default function EventExplorer() {
                         </td>
 
                         {/* Evidence Sources */}
-                        <td className="py-3.5 px-3">
-                          <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-[11px]">
+                        <td className="py-4 px-3">
+                          <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-[12px]">
                             {evt.independent_source_count} Platforms
                           </span>
-                        </td>
-
-                        {/* Action */}
-                        <td className="py-3.5 px-5 text-right">
-                          {isAdmin ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedEvent(evt);
-                              }}
-                              className="px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <span>Details</span>
-                              <ExternalLink size={12} />
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 font-medium">Read-Only</span>
-                          )}
                         </td>
                       </tr>
                     );

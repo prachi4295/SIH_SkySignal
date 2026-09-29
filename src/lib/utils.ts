@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Utility Functions
+   SkySignal — Utility Functions
    ═══════════════════════════════════════════════════════ */
 
 import { type ClassValue, clsx } from 'clsx';

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Active Events Table
+   SkySignal — Active Events Table
    Sortable events table with severity badges and status pills
    ═══════════════════════════════════════════════════════ */
 

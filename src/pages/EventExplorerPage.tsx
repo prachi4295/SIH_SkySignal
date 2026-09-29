@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Event Explorer Page
+   SkySignal — Event Explorer Page
    National Weather Intelligence Platform (IMD / SIH26069)
    High-density filterable radar & multi-dimensional queries
    ═══════════════════════════════════════════════════════ */

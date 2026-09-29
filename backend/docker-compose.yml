@@ -113,7 +113,7 @@ services:
 
   # ── MinIO (S3-compatible Object Storage: 9000/9001) ───────────
   minio:
-    image: quay.io/minio/minio:latest
+    image: coollabsio/minio:latest
     container_name: skysignal-minio
     command: server /data --console-address ":9001"
     environment:

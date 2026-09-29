@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Internationalization (i18n)
+   SkySignal — Internationalization (i18n)
    Bilingual support: English (en) + Hindi (hi)
    ═══════════════════════════════════════════════════════ */
 
@@ -12,7 +12,7 @@ const resources = {
       // ── App ──
       app: {
         name: 'SkySignal',
-        version: 'v2.0 — SIH26069',
+        version: 'SIH26069',
         tagline: 'Weather Intelligence Platform',
       },
 
@@ -140,7 +140,7 @@ const resources = {
       // ── App ──
       app: {
         name: 'स्काईसिग्नल',
-        version: 'v2.0 — SIH26069',
+        version: 'SIH26069',
         tagline: 'मौसम खुफिया मंच',
       },
 

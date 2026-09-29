@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Analytics & Intelligence Page
+   SkySignal — Analytics & Intelligence Page
    Macro-level meteorological distribution, source accuracy,
    and regional hazard vulnerability matrices
    ═══════════════════════════════════════════════════════ */

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Authentication Context
+   SkySignal — Authentication Context
    Manages analyst authorization, mock JWT token & session state
    ═══════════════════════════════════════════════════════ */
 

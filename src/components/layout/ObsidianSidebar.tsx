@@ -1,137 +1,224 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Obsidian Sidebar Navigation
+   SkySignal — Obsidian Sidebar Navigation
    Desktop: 228px fixed dark gradient #090e17 -> #0d1527
    Mobile (<768px): Hidden off-canvas drawer with backdrop
    Cyan glow bar (#38bdf8) active state styling
    ═══════════════════════════════════════════════════════ */
 
-import { NavLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard,
-  Compass,
+  CloudSun,
+  HeartHandshake,
+  Smartphone,
+  ShieldAlert,
+  Settings,
+  ShieldCheck,
   CheckCircle2,
   Copy,
-  BarChart3,
   FileCode,
-  Smartphone,
+  BarChart3,
   X,
-  Radio,
-  Shield,
 } from 'lucide-react';
 
 interface ObsidianSidebarProps {
-  mobileOpen: boolean;
-  onCloseMobile: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 interface NavItem {
+  id: string;
   name: string;
   nameHi: string;
   path: string;
+  sectionId?: string;
   icon: any;
   badge?: number;
+  adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
   {
-    name: 'Situational Overview',
-    nameHi: 'स्थिति अवलोकन',
-    path: '/',
-    icon: LayoutDashboard,
+    id: 'weather-status',
+    name: 'Weather Status',
+    nameHi: 'मौसम की स्थिति',
+    path: '/#weather-status',
+    sectionId: 'weather-status',
+    icon: CloudSun,
   },
   {
-    name: 'Event Explorer',
-    nameHi: 'घटना एक्सप्लोरर',
-    path: '/explorer',
-    icon: Compass,
+    id: 'report',
+    name: 'Citizen Portal',
+    nameHi: 'नागरिक पोर्टल',
+    path: '/#report',
+    sectionId: 'report',
+    icon: Smartphone,
   },
   {
+    id: 'relief',
+    name: 'Crisis Aid & Relief',
+    nameHi: 'आपदा सहायता और राहत',
+    path: '/relief-network',
+    icon: HeartHandshake,
+  },
+  {
+    id: 'emergency',
+    name: 'Emergency Helplines',
+    nameHi: 'आपातकालीन हेल्पलाइन',
+    path: '/emergency',
+    icon: ShieldAlert,
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    nameHi: 'सेटिंग्स',
+    path: '/settings',
+    icon: Settings,
+  },
+  {
+    id: 'privacy',
+    name: 'Privacy Policy',
+    nameHi: 'गोपनीयता नीति',
+    path: '/privacy',
+    icon: ShieldCheck,
+  },
+  {
+    id: 'analytics',
+    name: 'Analytics Dashboard',
+    nameHi: 'एनालिटिक्स डैशबोर्ड',
+    path: '/analytics',
+    icon: BarChart3,
+    adminOnly: true,
+  },
+  {
+    id: 'verification',
     name: 'Verification Queue',
     nameHi: 'सत्यापन कतार',
     path: '/verification',
     icon: CheckCircle2,
     badge: 12,
+    adminOnly: true,
   },
   {
+    id: 'duplicates',
     name: 'Duplicate Review',
     nameHi: 'डुप्लिकेट समीक्षा',
     path: '/duplicates',
     icon: Copy,
     badge: 3,
+    adminOnly: true,
   },
   {
-    name: 'Analytics Dashboard',
-    nameHi: 'एनालिटिक्स डैशबोर्ड',
-    path: '/analytics',
-    icon: BarChart3,
-  },
-  {
+    id: 'audit',
     name: 'Audit Log',
     nameHi: 'ऑडिट लॉग',
     path: '/audit',
     icon: FileCode,
-  },
-  {
-    name: 'Citizen Portal',
-    nameHi: 'नागरिक पोर्टल',
-    path: '/report',
-    icon: Smartphone,
+    adminOnly: true,
   },
 ];
 
 export default function ObsidianSidebar({
-  mobileOpen,
-  onCloseMobile,
+  isOpen,
+  onClose,
 }: ObsidianSidebarProps) {
   const { i18n } = useTranslation();
   const { isAdmin } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const isHindi = i18n.language === 'hi';
 
-  // Guests can only see Overview, Explorer, Analytics, and Citizen Portal
-  const GUEST_ALLOWED_PATHS = ['/', '/explorer', '/analytics', '/report'];
-  const visibleNavItems = isAdmin
-    ? NAV_ITEMS
-    : NAV_ITEMS.filter((item) => GUEST_ALLOWED_PATHS.includes(item.path));
+  const [activeSection, setActiveSection] = useState<string>('');
+
+  // Listen for scroll-spy updates from homepage
+  useEffect(() => {
+    const handleActiveSection = (e: Event) => {
+      const custom = e as CustomEvent<{ section: string }>;
+      if (custom.detail?.section) {
+        setActiveSection(custom.detail.section);
+      }
+    };
+    window.addEventListener('skysignal:active-section', handleActiveSection);
+    return () => window.removeEventListener('skysignal:active-section', handleActiveSection);
+  }, []);
+
+  const visibleNavItems = (isAdmin
+    ? [
+        NAV_ITEMS.find((i) => i.id === 'weather-status'),
+        NAV_ITEMS.find((i) => i.id === 'analytics'),
+        NAV_ITEMS.find((i) => i.id === 'verification'),
+        NAV_ITEMS.find((i) => i.id === 'duplicates'),
+        NAV_ITEMS.find((i) => i.id === 'audit'),
+        NAV_ITEMS.find((i) => i.id === 'settings'),
+        NAV_ITEMS.find((i) => i.id === 'privacy'),
+      ]
+    : [
+        NAV_ITEMS.find((i) => i.id === 'weather-status'),
+        NAV_ITEMS.find((i) => i.id === 'report'),
+        NAV_ITEMS.find((i) => i.id === 'relief'),
+        NAV_ITEMS.find((i) => i.id === 'emergency'),
+        NAV_ITEMS.find((i) => i.id === 'settings'),
+        NAV_ITEMS.find((i) => i.id === 'privacy'),
+      ]
+  ).filter((item): item is NavItem => Boolean(item));
+
+  const handleNavClick = (item: NavItem, e: React.MouseEvent) => {
+    if (item.sectionId) {
+      e.preventDefault();
+      if (location.pathname === '/') {
+        const elem = document.getElementById(item.sectionId);
+        if (elem) {
+          elem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setActiveSection(item.sectionId);
+        }
+      } else {
+        navigate(`/?section=${item.sectionId}`);
+      }
+      onClose();
+    } else {
+      onClose();
+    }
+  };
 
   const sidebarContent = (
     <aside
       className="
         h-full flex flex-col justify-between
-        bg-gradient-to-b from-[#090e17] via-[#0d1527] to-[#080c16]
-        text-slate-300 border-r border-[#1e293b]/70
-        shadow-2xl select-none
+        bg-gradient-to-b from-[#2d2a27] via-[#24211f] to-[#1a1816]
+        text-stone-300 border-r border-[#443e39]/80
+        shadow-2xl select-none w-full
       "
-      style={{ width: '228px' }}
       aria-label="Main Navigation"
     >
       {/* ── Brand Header ── */}
-      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+      <div className="p-4 border-b border-[#443e39]/80 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-lg shadow-sky-500/25">
-            <Radio size={18} className="animate-pulse" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="SkySignal Logo"
+            className="w-8 h-8 object-contain select-none"
+          />
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-[15px] tracking-tight text-white font-['Outfit']">
-                SkySignal
-              </span>
-              <span className="px-1.5 py-0.2 rounded-md bg-sky-500/20 text-sky-400 font-bold text-[9px] border border-sky-400/30">
-                2.0
+              <span className="font-black text-[16px] tracking-tight">
+                <span style={{ color: '#ffffff' }}>Sky</span>
+                <span style={{ color: '#d97706' }}>Signal</span>
               </span>
             </div>
-            <div className="text-[10px] text-slate-400 tracking-wider uppercase font-semibold">
-              IMD Radar Command
+            <div className="text-[10px] text-stone-400 tracking-wider uppercase font-semibold">
+              {isHindi ? 'आईएमडी रडार कमान' : 'IMD Radar Command'}
             </div>
           </div>
         </div>
 
-        {/* Mobile close button */}
+        {/* Close Button */}
         <button
-          onClick={onCloseMobile}
-          className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
-          aria-label="Close sidebar"
+          onClick={onClose}
+          className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800/60 transition-colors cursor-pointer"
+          aria-label="Close menu"
+          title="Close menu"
         >
           <X size={18} />
         </button>
@@ -139,34 +226,92 @@ export default function ObsidianSidebar({
 
       {/* ── Nav Links ── */}
       <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-        <div className="px-3 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="px-3 pb-2 text-[10px] font-bold text-stone-400 uppercase tracking-widest">
           {isHindi ? 'नेविगेशन' : 'Intelligence Radar'}
         </div>
 
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
+          const isSectionItem = !!item.sectionId;
+          const isCurrentActive = isSectionItem
+            ? location.pathname === '/' && activeSection === item.sectionId
+            : location.pathname === item.path;
+
+          if (isSectionItem) {
+            return (
+              <a
+                key={item.path}
+                href={`#${item.sectionId}`}
+                onClick={(e) => handleNavClick(item, e)}
+                className={`
+                  relative flex items-center justify-between px-3 py-2.5 rounded-xl
+                  text-[13px] font-medium transition-all duration-200 group cursor-pointer
+                  ${
+                    isCurrentActive
+                      ? 'text-white bg-amber-500/20 shadow-[0_0_20px_rgba(217,119,6,0.22)] font-semibold'
+                      : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/40'
+                  }
+                `}
+              >
+                {/* Amber Active Indicator Bar (#d97706) */}
+                {isCurrentActive && (
+                  <span
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-full bg-[#d97706] shadow-[0_0_12px_#d97706]"
+                    aria-hidden="true"
+                  />
+                )}
+
+                <div className="flex items-center gap-3">
+                  <Icon
+                    size={18}
+                    className={`transition-colors ${
+                      isCurrentActive
+                        ? 'text-[#d97706]'
+                        : 'text-stone-400 group-hover:text-stone-300'
+                    }`}
+                  />
+                  <span className="truncate">
+                    {isHindi ? item.nameHi : item.name}
+                  </span>
+                </div>
+
+                {/* Badge */}
+                {item.badge && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      isCurrentActive
+                        ? 'bg-[#d97706] text-stone-950 font-black'
+                        : 'bg-stone-800 text-stone-300 group-hover:bg-stone-700'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </a>
+            );
+          }
 
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              onClick={onCloseMobile}
+              onClick={onClose}
               className={({ isActive }) => `
                 relative flex items-center justify-between px-3 py-2.5 rounded-xl
                 text-[13px] font-medium transition-all duration-200 group
                 ${
                   isActive
-                    ? 'text-white bg-sky-500/15 shadow-[0_0_20px_rgba(56,189,248,0.18)] font-semibold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                    ? 'text-white bg-amber-500/20 shadow-[0_0_20px_rgba(217,119,6,0.22)] font-semibold'
+                    : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/40'
                 }
               `}
             >
               {({ isActive }) => (
                 <>
-                  {/* Cyan Active Indicator Bar (#38bdf8) */}
+                  {/* Amber Active Indicator Bar (#d97706) */}
                   {isActive && (
                     <span
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-full bg-[#38bdf8] shadow-[0_0_12px_#38bdf8]"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-full bg-[#d97706] shadow-[0_0_12px_#d97706]"
                       aria-hidden="true"
                     />
                   )}
@@ -176,8 +321,8 @@ export default function ObsidianSidebar({
                       size={18}
                       className={`transition-colors ${
                         isActive
-                          ? 'text-[#38bdf8]'
-                          : 'text-slate-400 group-hover:text-slate-300'
+                          ? 'text-[#d97706]'
+                          : 'text-stone-400 group-hover:text-stone-300'
                       }`}
                     />
                     <span className="truncate">
@@ -190,8 +335,8 @@ export default function ObsidianSidebar({
                     <span
                       className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                         isActive
-                          ? 'bg-[#38bdf8] text-slate-950 font-black'
-                          : 'bg-slate-800 text-slate-300 group-hover:bg-slate-700'
+                          ? 'bg-[#d97706] text-stone-950 font-black'
+                          : 'bg-stone-800 text-stone-300 group-hover:bg-stone-700'
                       }`}
                     >
                       {item.badge}
@@ -203,49 +348,24 @@ export default function ObsidianSidebar({
           );
         })}
       </nav>
-
-      {/* ── Bottom Radar Telemetry Status ── */}
-      <div className="p-3.5 m-3 rounded-2xl bg-slate-900/80 border border-slate-800/90 text-[11px] space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-slate-300 font-semibold">
-            <Shield size={13} className="text-emerald-400" />
-            <span>Doppler Grid</span>
-          </div>
-          <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            ONLINE
-          </span>
-        </div>
-        <p className="text-[10px] text-slate-400 leading-tight">
-          Pan-India multi-sensor fusion with automated ML verification.
-        </p>
-      </div>
     </aside>
   );
 
+  if (!isOpen) return null;
+
   return (
-    <>
-      {/* ── Desktop Fixed Sidebar (width 228px) ── */}
-      <div className="hidden md:block fixed inset-y-0 left-0 z-40 w-[228px]">
+    <div className="fixed inset-0 z-50 flex">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Drawer container (slides from left) */}
+      <div className="relative z-10 w-[250px] sm:w-[260px] h-full shadow-2xl animate-slide-in-left">
         {sidebarContent}
       </div>
-
-      {/* ── Mobile Off-Canvas Drawer (<768px) ── */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-fade-in"
-            onClick={onCloseMobile}
-            aria-hidden="true"
-          />
-
-          {/* Drawer container */}
-          <div className="relative z-10 w-[228px] h-full shadow-2xl animate-slide-in-left">
-            {sidebarContent}
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

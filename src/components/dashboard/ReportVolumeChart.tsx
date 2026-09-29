@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Report Volume Chart
+   SkySignal — Report Volume Chart
    24-hour area chart with gradient fills using Recharts
    ═══════════════════════════════════════════════════════ */
 

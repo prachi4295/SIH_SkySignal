@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Offline-First IndexedDB Queue
+   SkySignal — Offline-First IndexedDB Queue
    IndexedDB persistence for resilient crowd observations
    Auto-flush on connection recovery + device tracking
    ═══════════════════════════════════════════════════════ */

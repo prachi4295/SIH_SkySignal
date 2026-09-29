@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Dashboard Overview Page
+   SkySignal — Dashboard Overview Page
    Composes KPI cards, map, priority watch, events table,
    report volume chart, and source reliability meters
    ═══════════════════════════════════════════════════════ */

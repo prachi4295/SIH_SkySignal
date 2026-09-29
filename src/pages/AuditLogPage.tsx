@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Audit Log & Decision Ledger
+   SkySignal — Audit Log & Decision Ledger
    Immutable administrative record for meteorological triage
    ═══════════════════════════════════════════════════════ */
 

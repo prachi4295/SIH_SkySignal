@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Admin & Analyst Auth Modal
+   SkySignal — Admin & Analyst Auth Modal
    Glassmorphic authentication modal with 1-click demo autofills
    ═══════════════════════════════════════════════════════ */
 

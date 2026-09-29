@@ -1,4 +1,4 @@
-# SkySignal 2.0 — Memory Tracking Protocol
+# SkySignal — Memory Tracking Protocol
 
 > **Project:** SIH26069 — National Weather Intelligence Platform  
 > **Stack:** Vite + React 19 + TypeScript + Tailwind CSS v4 (SPA, no Next.js/SSR)  

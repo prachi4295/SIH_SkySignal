@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Citizen Observation Portal
+   SkySignal — Citizen Observation Portal
    Fast mobile reporting, bilingual, GPS location & offline sync
    ═══════════════════════════════════════════════════════ */
 
@@ -141,12 +141,17 @@ export default function CitizenReportPage() {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const sampleImages = [
-      'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1514632595-4944383f2737?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=600&q=80',
-    ];
-    const picked = sampleImages[mediaUrls.length % sampleImages.length];
+    const categoryImageMap: Record<string, string[]> = {
+      rainfall: ['/images/rain/1.jpg', '/images/rain/2.jpg', '/images/rain/3.jpg', '/images/rain/4.jpg'],
+      flooding: ['/images/flooding/1.jpg', '/images/flooding/2.jpg', '/images/flooding/3.jpg', '/images/flooding/4.jpg'],
+      thunderstorm: ['/images/thunderstorm/1.jpg', '/images/thunderstorm/2.jpg'],
+      'dust storm': ['/images/duststorms/1.jpg', '/images/duststorms/2.jpg', '/images/duststorms/3.jpg'],
+      fog: ['/images/fog/1.jpg', '/images/fog/2.jpg', '/images/fog/3.jpg'],
+      'strong wind': ['/images/strong_wind/1.jpg'],
+      heatwave: ['/images/duststorms/2.jpg'],
+    };
+    const pool = categoryImageMap[category] || ['/images/rain/1.jpg'];
+    const picked = pool[mediaUrls.length % pool.length];
     setMediaUrls((prev) => [...prev, picked]);
   };
 
@@ -242,16 +247,27 @@ export default function CitizenReportPage() {
         </div>
       </div>
 
-      {/* ── Success Banner ── */}
+      {/* ── Success Toast (Floating Bottom-Right) ── */}
       {submissionSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[13px] font-semibold flex items-center justify-between shadow-sm animate-fade-in">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
-            <span>{submissionSuccess}</span>
+        <div className="fixed bottom-22 right-6 z-50 max-w-md w-[calc(100vw-3rem)] sm:w-[420px] animate-slide-up pointer-events-auto">
+          <div className="p-4 rounded-2xl bg-emerald-50/95 border border-emerald-300 text-emerald-950 text-[13px] font-bold flex items-start justify-between gap-3 shadow-2xl backdrop-blur-md ring-1 ring-emerald-400/30">
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="leading-snug block">{submissionSuccess}</span>
+                <span className="text-[10px] text-emerald-700/80 font-mono block">
+                  Encrypted telemetry sync • IMD National Center
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSubmissionSuccess(null)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-black/5 transition-colors shrink-0 cursor-pointer"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button onClick={() => setSubmissionSuccess(null)}>
-            <X size={16} />
-          </button>
         </div>
       )}
 

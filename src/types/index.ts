@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Core Type Definitions
+   SkySignal — Core Type Definitions
    Strict taxonomy for weather intelligence platform
    ═══════════════════════════════════════════════════════ */
 
@@ -55,6 +55,7 @@ export interface WeatherEvent {
   sources: number;
   reportCount: number;
   description: string;
+  media_urls?: string[];
   createdAt: string;   // ISO datetime
   updatedAt: string;   // ISO datetime
 }
@@ -72,6 +73,7 @@ export interface CitizenReport {
   };
   description: string;
   mediaUrl?: string;
+  media_urls?: string[];
   deviceId: string;
   verificationStatus: VerificationStatus;
   confidence: number;

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Verification Queue Page
+   SkySignal — Verification Queue Page
    Analyst Triage Center for incoming crowd & sensor reports
    Bulk verification, ML Misleading score filters & lightbox
    ═══════════════════════════════════════════════════════ */

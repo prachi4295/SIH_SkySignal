@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — Obsidian Sidebar Navigation
+   SkySignal — Obsidian Sidebar Navigation
    Dark gradient command-center sidebar with glow effects
    Integrated with react-i18next for bilingual support
    ═══════════════════════════════════════════════════════ */

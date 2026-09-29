@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SkySignal 2.0 — KPI Stat Cards
+   SkySignal — KPI Stat Cards
    Animated stat cards with trend indicators and stagger
    ═══════════════════════════════════════════════════════ */
 
