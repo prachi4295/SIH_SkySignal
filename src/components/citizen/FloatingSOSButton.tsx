@@ -78,7 +78,7 @@ export default function FloatingSOSButton() {
       {/* ── Floating SOS Button (Bottom Right) ── */}
       <aside
         aria-label="Emergency SOS Quick Action"
-        className="fixed bottom-6 right-6 z-50 flex items-center group pointer-events-auto"
+        className="fixed bottom-16 sm:bottom-20 right-6 z-50 flex items-center group pointer-events-auto"
       >
         <button
           type="button"

@@ -177,7 +177,7 @@ export default function TelemetryToast({ onSelectEvent: _onSelectEvent }: Teleme
   return (
     <aside
       aria-label="Real-time telemetry alert"
-      className="fixed bottom-6 right-6 z-50 max-w-sm w-full animate-slide-in-right"
+      className="fixed bottom-28 sm:bottom-32 right-6 z-50 max-w-sm w-full animate-slide-in-right"
     >
       <div
         className="glass-card p-4 rounded-3xl border border-amber-300/90 shadow-2xl bg-white/95 backdrop-blur-2xl ring-1 ring-amber-500/30 space-y-3 relative"
